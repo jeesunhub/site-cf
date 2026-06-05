@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Management - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        .container {
+            padding: 0;
+            margin: 0;
+            width: 100%;
+        }
+
+        .payment-container {
+            max-width: none;
+            margin: 0;
+            width: 100%;
+        }
+
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+            margin-bottom: 0;
+            width: 100%;
+            box-sizing: border-box;
+            /* Important for padding */
+        }
+
+        .header-section h1 {
+            font-size: 1.25rem !important;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            white-space: nowrap;
+            margin-right: 1rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.2rem;
+        }
+
+        .filters-section {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-group label {
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+
+        /* List Layout Styles */
+        .mgmt-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            margin-top: 0;
+        }
+
+        .mgmt-item {
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s;
+        }
+
+        .mgmt-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .mgmt-summary {
+            display: flex;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            gap: 1.2rem;
+            min-height: 5rem;
+            cursor: pointer;
+        }
+
+        .mgmt-left {
+            width: 4.5rem;
+            padding: 0.4rem 0.2rem;
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            border-radius: 0.4rem;
+            text-align: center;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            min-height: 3.2rem;
+        }
+
+        .mgmt-left .b-name {
+            font-size: 0.65rem;
+            opacity: 0.7;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 400;
+        }
+
+        .mgmt-left .r-num {
+            font-size: 0.9rem;
+            font-weight: 700;
+            width: 100%;
+        }
+
+        .mgmt-center {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
+            min-width: 0;
+        }
+
+        .center-top {
+            flex: 1;
+            display: flex;
+            align-items: flex-end;
+            font-size: 1rem;
+            font-weight: 400;
+            padding-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #f8fafc;
+        }
+
+        .center-bottom {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.5);
+            gap: 0px;
+            padding-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .mgmt-right {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+            align-self: center;
+        }
+
+        .action-btn {
+            height: 2rem;
+            padding: 0 1rem;
+            border-radius: 0.4rem;
+            border: none;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: opacity 0.2s;
+        }
+
+        .action-btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-edit {
+            background: var(--primary);
+        }
+
+        .btn-delete {
+            background: #ef4444;
+        }
+
+        .status-badge-glass {
+            height: 1.8rem;
+            padding: 0 0.8rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .status-paid {
+            background: rgba(74, 222, 128, 0.1);
+            color: #4ade80;
+            border: 1px solid rgba(74, 222, 128, 0.2);
+        }
+
+        .status-unpaid {
+            background: rgba(248, 113, 113, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(248, 113, 113, 0.2);
+        }
+
+        .btn-delete-glass {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            backdrop-filter: blur(4px);
+            transition: all 0.2s;
+        }
+
+        .btn-delete-glass:hover {
+            background: rgba(239, 68, 68, 0.2);
+            transform: translateY(-1px);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: #1e293b;
+            padding: 2rem;
+            border-radius: 1rem;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .modal-footer {
+            margin-top: 2rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .text-input-area {
+            width: 100%;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            color: #fff;
+            padding: 1rem;
+            resize: vertical;
+            font-family: inherit;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar will be rendered by JS -->
+
+    <div class="header-section"
+        style="height: auto; min-height: 3.5rem; flex-direction: column; align-items: flex-start; padding: 0.5rem 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; height: 2.5rem;">
+            <h1>납부 관리</h1>
+            <div class="action-buttons">
+                <input type="file" id="excel-upload" accept=".xlsx, .xls" style="display:none"
+                    onchange="handleExcelUpload(event)">
+                <button class="btn-glass" onclick="document.getElementById('excel-upload').click()">엑셀 업로드</button>
+                <button class="btn-glass" onclick="alert('준비 중입니다.')">표 추가</button>
+                <button class="btn-glass" onclick="openPasteModal()">문자 추가</button>
+            </div>
+        </div>
+        <div id="header-filters"
+            style="display: flex; gap: 0.8rem; align-items: center; width: 100%; margin-top: 0.5rem; flex-wrap: wrap;">
+            <!-- Dropdowns injected by setupUIByRole() -->
+        </div>
+    </div>
+
+    <div class="container payment-container" style="padding: 0;">
+        <div id="payment-list" class="mgmt-list">
+            <!-- Populated by JS -->
+            <div style="text-align: center; padding: 3rem; opacity: 0.5;">로딩 중...</div>
+        </div>
+    </div>
+
+    <!-- Paste Modal -->
+    <div id="paste-modal" class="modal" onclick="if(event.target === this) closeModal('paste-modal')">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>문자 붙여넣기</h2>
+            </div>
+            <textarea id="paste-input" class="text-input-area" placeholder="입금 문자를 여기에 붙여넣으세요..."></textarea>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('paste-modal')">취소</button>
+                <button class="btn" onclick="processPaste()">완료</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script src="/js/common.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+        let ledgerData = [];
+        let activeContracts = [];
+        let currentParsedData = null;
+        let selectedContractId = null;
+
+        // View State
+        let currentMode = 'list'; // 'list' (tenant list) or 'detail' (monthly list)
+        let currentDetailTenantId = null;
+
+        // "Next Month" Logic helper
+        function getNextMonthYYMM() {
+            const d = new Date();
+            d.setMonth(d.getMonth() + 1);
+            const yy = String(d.getFullYear()).slice(2);
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            return `${yy}-${mm}`; // YY-MM or YYYY-MM based on data fmt. DB usually YYYY-MM
+        }
+        function getNextMonthYYYYMM() {
+            const d = new Date();
+            d.setMonth(d.getMonth() + 1);
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            return `${yyyy}-${mm}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!user) {
+                window.location.href = '/index.html';
+                return;
+            }
+            if (user.role === 'tenant') {
+                window.location.href = 'payments_monthly.html';
+                return;
+            }
+            renderNavbar();
+            await loadTableData();
+            await loadActiveContracts();
+        });
+
+        function updateHeaderUI() {
+            const headerTitle = document.querySelector('.header-section h1');
+            const parentDiv = headerTitle.parentElement; // The flex container
+
+            let backBtn = document.getElementById('back-btn-wrapper');
+
+            // Create back button if not exists
+            if (!backBtn) {
+                backBtn = document.createElement('div');
+                backBtn.id = 'back-btn-wrapper';
+                backBtn.style.display = 'none'; // Initial state
+                backBtn.style.marginRight = '0.5rem';
+                backBtn.style.alignItems = 'center';
+                backBtn.style.cursor = 'pointer';
+                backBtn.innerHTML = `
+                    <button class="action-btn" onclick="goBackToList()" style="background:none; border:none; padding:0.2rem; display:flex; align-items:center; color:white;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 19l-7-7 7-7" />
+                        </svg>
+                        <span style="font-size: 1rem; margin-left: -2px; padding-bottom: 2px;">뒤로</span>
+                    </button>
+                `;
+                // Insert before H1
+                parentDiv.insertBefore(backBtn, headerTitle);
+            }
+
+            if (currentMode === 'detail' && (user.role === 'landlord' || user.role === 'admin')) {
+                backBtn.style.display = 'flex';
+                headerTitle.textContent = '월별 납부 내역';
+            } else {
+                backBtn.style.display = 'none';
+                headerTitle.textContent = '납부 관리';
+            }
+        }
+
+        function goBackToList() {
+            currentMode = 'list';
+            currentDetailTenantId = null;
+            updateHeaderUI();
+            renderTenantList(ledgerData);
+        }
+
+        async function loadActiveContracts() {
+            if (user.role === 'landlord' || user.role === 'admin') {
+                try {
+                    if (user.role === 'landlord') {
+                        const res = await fetch(`/api/landlord/${user.id}/contracts/active`);
+                        if (res.ok) {
+                            activeContracts = await res.json();
+                        }
+                    } else if (user.role === 'admin') {
+                        // Admin fetch logic if needed
+                    }
+                } catch (e) {
+                    console.error("Failed to load contracts", e);
+                }
+            }
+        }
+
+        async function loadTableData() {
+            const params = new URLSearchParams();
+            params.append('role', user.role);
+            params.append('user_id', user.id);
+
+            try {
+                const res = await fetch(`/api/payments/ledger?${params.toString()}`);
+                if (res.status === 404) {
+                    handleDataLoaded([]);
+                    return;
+                }
+                if (!res.ok) throw new Error('Server error: ' + res.status);
+                const data = await res.json();
+                ledgerData = data;
+                handleDataLoaded(data);
+            } catch (err) {
+                console.error('Failed to load table data:', err);
+                const list = document.getElementById('payment-list');
+                list.innerHTML = `<div style="text-align:center; padding:2rem; color: #f87171;">데이터 로딩 실패<br><span style="font-size:0.8rem; opacity:0.7">${err.message}</span></div>`;
+            }
+        }
+
+        function handleDataLoaded(data) {
+            if (user.role === 'tenant') {
+                window.location.href = 'payments_monthly.html';
+                return;
+            }
+            renderTenantList(data);
+        }
+
+        function formatYYMMDD(dateStr) {
+            if (!dateStr || dateStr === '-') return '-';
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return '-';
+            const yy = String(date.getFullYear()).slice(2);
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            return `${yy}-${mm}-${dd}`;
+        }
+
+        function formatUnit(amount) {
+            if (!amount) return '0';
+            return (amount / 10000).toLocaleString();
+        }
+
+        function formatCurrency(amount) {
+            return amount.toLocaleString();
+        }
+
+        // --- RENDER LOGIC ---
+
+        function renderTenantList(data) {
+            const list = document.getElementById('payment-list');
+            list.innerHTML = '';
+
+            // Group by Tenant/Contract
+            // Key: tenant_id + building_id (to separate different contracts if any)
+            const groups = {};
+
+            data.forEach(row => {
+                const key = `${row.tenant_id}_${row.building_id}`;
+                if (!groups[key]) {
+                    groups[key] = {
+                        tenant_name: row.tenant_name,
+                        tenant_id: row.tenant_id,
+                        building_name: row.building_name,
+                        building_id: row.building_id,
+                        room_number: row.room_number,
+                        total_due: 0,
+                        total_paid: 0,
+                        unpaid_amount: 0,
+                        last_paid_date: null,
+                        keywords: row.keywords
+                    };
+                }
+                const g = groups[key];
+                g.total_due += (row.due_amount || 0);
+                g.total_paid += (row.paid_amount || 0);
+            });
+
+            // Convert to array
+            const groupList = Object.values(groups);
+
+            // Calculate unpaid
+            groupList.forEach(g => {
+                g.unpaid_amount = g.total_due - g.total_paid;
+                // Clamp to 0 if negative (overpaid) - or keep generic? 
+                // Usually arrears is positive.
+            });
+
+            if (groupList.length === 0) {
+                list.innerHTML = '<div style="text-align:center; padding:3rem; opacity:0.5;">데이터가 없습니다.</div>';
+                return;
+            }
+
+            // Render
+            groupList.forEach(g => {
+                const item = document.createElement('div');
+                item.className = 'mgmt-item';
+                item.onclick = () => {
+                    window.location.href = `payments_monthly.html?tenant_id=${g.tenant_id}`;
+                };
+
+                // Styling for arrears
+                let arrearsText = '';
+                let statusHtml = '';
+
+                if (g.unpaid_amount > 0) {
+                    arrearsText = `총 미납: ${formatCurrency(g.unpaid_amount)}원`;
+                    statusHtml = `<div class="status-badge-glass status-unpaid">미납</div>`;
+                } else {
+                    arrearsText = `총 미납: 0원`;
+                    statusHtml = `<div class="status-badge-glass status-paid">완납</div>`;
+                }
+
+                item.innerHTML = `
+                    <div class="mgmt-summary">
+                        <div class="mgmt-left" style="background: rgba(99, 102, 241, 0.15); color: #a5b4fc;">
+                             <div class="b-name">${g.building_name}</div>
+                             <div class="r-num">${g.room_number}</div>
+                        </div>
+                        <div class="mgmt-center">
+                            <div class="center-top" style="font-size: 1.1rem; font-weight: 500;">
+                                ${g.tenant_name} <span style="font-size:0.8rem; color:#94a3b8; font-weight:400; margin-left:0.5rem;">${g.keywords || ''}</span>
+                            </div>
+                            <div class="center-bottom" style="font-size: 0.9rem; color: rgba(255,255,255,0.7); margin-top: 0.3rem;">
+                                ${arrearsText}
+                            </div>
+                        </div>
+                        <div class="mgmt-right" style="display: flex; align-items: center; gap: 0.8rem; padding-right: 0.5rem;">
+                            ${statusHtml}
+                            ${user.role === 'admin' ? `
+                                <button class="action-btn btn-delete-glass" style="height: 1.8rem; padding: 0 0.8rem; font-size: 0.75rem;" 
+                                    onclick="handleDeleteTenant(event, ${g.tenant_id}, '${g.tenant_name}')">삭제</button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        async function handleDeleteTenant(event, tenantId, name) {
+            event.stopPropagation();
+            if (!confirm(`[위험] ${name} 세입자와 관련된 모든 정보(계약, 납부 내역, 메시지 등)를 영구적으로 삭제하시겠습니까?`)) return;
+
+            try {
+                const res = await fetch(`/api/users/${tenantId}?hard=true`, { method: 'DELETE' });
+                if (res.ok) {
+                    alert('삭제되었습니다.');
+                    loadTableData(); // Refresh list
+                } else {
+                    const data = await res.json();
+                    alert('삭제 실패: ' + (data.error || '알 수 없는 오류'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('서버 오류');
+            }
+        }
+
+
+
+        function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                console.log('Excel Data:', jsonData);
+                alert(`${jsonData.length}개의 데이터가 로드되었습니다. 구현 중입니다.`);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // --- Text Paste & Parsing Logic ---
+
+        function openPasteModal() {
+            document.getElementById('paste-input').value = '';
+            document.getElementById('paste-modal').style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function processPaste() {
+            const text = document.getElementById('paste-input').value.trim();
+            if (!text) return alert('텍스트를 입력해주세요.');
+
+            const parsed = parsePaymentText(text);
+            if (!parsed) {
+                return alert('파싱 실패: "입금" 키워드를 찾을 수 없거나 형식이 올바르지 않습니다.');
+            }
+
+            sessionStorage.setItem('pending_payment', JSON.stringify(parsed));
+            window.location.href = 'payments_keyword.html';
+        }
+
+        function parsePaymentText(text) {
+            const depositIdx = text.indexOf('입금');
+            if (depositIdx === -1) return null;
+
+            // 1. Amount: number immediately after "입금"
+            const afterDeposit = text.substring(depositIdx + "입금".length).trim();
+            const amountMatch = afterDeposit.match(/^([\d,]+)/);
+            if (!amountMatch) return null;
+            const amount = parseInt(amountMatch[1].replace(/,/g, ''), 10);
+
+            // 2. Date/Time: MM/DD [HH:mm]
+            const dateTimeMatch = text.match(/(\d{1,2})\/(\d{1,2})(\s+(\d{1,2}):(\d{1,2}))?/);
+            let paymentDate = new Date();
+            if (dateTimeMatch) {
+                const month = parseInt(dateTimeMatch[1], 10);
+                const day = parseInt(dateTimeMatch[2], 10);
+                const hour = dateTimeMatch[4] ? parseInt(dateTimeMatch[4], 10) : 12;
+                const min = dateTimeMatch[5] ? parseInt(dateTimeMatch[5], 10) : 0;
+
+                const today = new Date();
+                const currentYear = today.getFullYear();
+                const dates = [
+                    new Date(currentYear - 1, month - 1, day, hour, min),
+                    new Date(currentYear, month - 1, day, hour, min),
+                    new Date(currentYear + 1, month - 1, day, hour, min)
+                ];
+                paymentDate = dates.reduce((prev, curr) => {
+                    return (Math.abs(curr - today) < Math.abs(prev - today) ? curr : prev);
+                });
+            }
+
+            // 3. Tokens before amount
+            const beforeDeposit = text.substring(0, depositIdx).trim();
+            const tokens = beforeDeposit.split(/[<>\[\]\s\n]+/).filter(t => t.length > 0);
+            const keyword = tokens.length > 0 ? tokens[tokens.length - 1] : '';
+
+            return {
+                tokens: tokens,
+                keyword: keyword,
+                amount: amount,
+                date: paymentDate,
+                originalText: text
+            };
+        }
+    </script>
+</body>
+
+</html>

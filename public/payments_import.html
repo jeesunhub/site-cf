@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Payments - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+
+<body>
+    <div class="container" id="main-content">
+        <div class="settings-container">
+            <h2 style="margin-bottom:1.5rem">Import Payments</h2>
+
+            <div class="import-controls">
+                <label class="btn btn-secondary">
+                    파일 추가 (Excel)
+                    <input type="file" id="file-input" onchange="handleFile(this)" accept=".xlsx, .xls"
+                        style="display:none">
+                </label>
+                <button class="btn btn-secondary" onclick="togglePasteArea()">문자 붙여넣기</button>
+            </div>
+
+            <div id="paste-area" style="display:none; margin-bottom:1rem">
+                <textarea id="paste-input" placeholder="여기에 텍스트를 붙여넣으세요..."
+                    style="width:100%; height:150px; background:var(--card-bg); color:white; border:1px solid rgba(255,255,255,0.2); padding:1rem; border-radius:0.5rem"></textarea>
+                <button class="btn" style="margin-top:0.5rem" onclick="handlePaste()">파싱하기</button>
+            </div>
+
+            <div id="preview-area" style="display:none">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem">
+                    <h3>미리보기</h3>
+                    <div style="display:flex; gap:10px">
+                        <button class="btn btn-secondary"
+                            onclick="window.location.href='/settings_profile.html'">취소</button>
+                        <button class="btn" onclick="commitImport()">완료</button>
+                    </div>
+                </div>
+                <div style="overflow-x:auto">
+                    <table class="preview-table">
+                        <thead>
+                            <tr>
+                                <th>거래일자</th>
+                                <th>거래시간</th>
+                                <th>거래내용/메모</th>
+                                <th>출금액</th>
+                                <th>입금액</th>
+                                <th>세입자</th>
+                            </tr>
+                        </thead>
+                        <tbody id="preview-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="match-popup"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center">
+            <div
+                style="background:#1e293b; padding:2rem; border-radius:1rem; width:400px; max-height:80vh; overflow-y:auto">
+                <h3 style="margin-bottom:1rem">세입자 매칭</h3>
+                <p id="popup-memo" style="margin-bottom:1rem; opacity:0.7"></p>
+                <div id="popup-list" style="display:flex; flex-direction:column; gap:0.5rem"></div>
+                <button class="btn btn-secondary" style="width:100%; margin-top:1rem" onclick="closePopup()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>
+        let activeContracts = [];
+        let parsedRows = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            renderNavbar([
+                { name: 'Profile Settings', url: '/settings_profile.html' },
+                { name: 'Import Payments', url: '/payments_import.html' }
+            ]);
+
+            const res = await fetch(`/api/landlord/${user.id}/contracts/active`);
+            activeContracts = await res.json();
+        });
+
+        function togglePasteArea() {
+            const area = document.getElementById('paste-area');
+            area.style.display = area.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function handleFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                processExcelRows(rows);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processExcelRows(rows) {
+            // Very simple parser for bank excel - highly dependent on format
+            // Here we just skip headers and try to find columns
+            parsedRows = rows.slice(1).map(row => {
+                return {
+                    date: row[0],
+                    time: row[1],
+                    memo: row[2],
+                    out: row[3] || 0,
+                    in: row[4] || 0,
+                    matchedContractId: matchTenant(row[2])
+                };
+            }).filter(r => r.date);
+            renderPreview();
+        }
+
+        function handlePaste() {
+            const text = document.getElementById('paste-input').value;
+            const rows = text.split('\n').map(line => line.split('\t'));
+            processExcelRows(rows);
+        }
+
+        function matchTenant(memo) {
+            if (!memo) return null;
+            const contract = activeContracts.find(c => {
+                const keywords = c.keyword ? c.keyword.split(',') : [c.nickname];
+                return keywords.some(k => memo.includes(k));
+            });
+            return contract ? contract.id : null;
+        }
+
+        function renderPreview() {
+            const area = document.getElementById('preview-area');
+            const tbody = document.getElementById('preview-tbody');
+            area.style.display = 'block';
+            tbody.innerHTML = parsedRows.map((row, idx) => `
+                <tr>
+                    <td>${row.date}</td>
+                    <td>${row.time || ''}</td>
+                    <td>${row.memo}</td>
+                    <td>${formatCurrency(row.out)}</td>
+                    <td>${formatCurrency(row.in)}</td>
+                    <td id="match-${idx}" class="matched-tenant" onclick="openMatchPopup(${idx})">
+                        ${row.matchedContractId ? activeContracts.find(c => c.id === row.matchedContractId).nickname : '매칭 필요'}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        let currentMatchIdx = null;
+        function openMatchPopup(idx) {
+            currentMatchIdx = idx;
+            const row = parsedRows[idx];
+            document.getElementById('match-popup').style.display = 'flex';
+            document.getElementById('popup-memo').innerText = `거래내용: ${row.memo}`;
+
+            const list = document.getElementById('popup-list');
+            list.innerHTML = activeContracts.map(c => `
+                <div class="settings-item" style="padding:0.8rem" onclick="selectMatch(${c.id})">
+                    ${c.nickname} (${c.building} ${c.room_number})
+                </div>
+            `).join('');
+        }
+
+        function selectMatch(contractId) {
+            parsedRows[currentMatchIdx].matchedContractId = contractId;
+            closePopup();
+            renderPreview();
+        }
+
+        function closePopup() {
+            document.getElementById('match-popup').style.display = 'none';
+        }
+
+        async function commitImport() {
+            const payments = parsedRows.filter(r => r.in > 0 && r.matchedContractId).map(r => {
+                const contract = activeContracts.find(c => c.id === r.matchedContractId);
+                return {
+                    tenant_id: contract.tenant_id,
+                    amount: r.in,
+                    paid_at: r.date.replace(/\./g, '-') + 'T' + (r.time || '12:00') + ':00Z',
+                    memo: r.memo
+                };
+            });
+
+            if (payments.length === 0) {
+                alert('가져올 입금 내역이 없습니다.');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/payments/batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ payments })
+                });
+                if (res.ok) {
+                    alert('성공적으로 등록되었습니다.');
+                    window.location.href = '/dashboard.html';
+                }
+            } catch (err) {
+                alert('등록 중 오류가 발생했습니다.');
+            }
+        }
+    </script>
+</body>
+
+</html>

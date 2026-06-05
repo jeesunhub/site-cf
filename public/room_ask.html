@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>문의하기 - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        #layout-main {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 0 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+        }
+
+        .back-link {
+            color: #f8fafc;
+            text-decoration: none;
+            font-size: 1.5rem;
+            margin-right: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .back-link:hover {
+            transform: translateX(-3px);
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .container {
+            padding: 2rem 1.5rem;
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .info-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .info-card h2 {
+            margin: 0 0 1rem 0;
+            font-size: 1.1rem;
+            color: #a5b4fc;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .info-row .label {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .info-row .value {
+            color: #f8fafc;
+            font-weight: 500;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.8rem;
+            color: white;
+            font-size: 1rem;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .form-input[readonly] {
+            background: rgba(255, 255, 255, 0.02);
+            color: rgba(255, 255, 255, 0.5);
+            cursor: not-allowed;
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .submit-btn {
+            height: 3.5rem;
+            width: 100%;
+            border-radius: 1rem;
+            border: none;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            transition: all 0.2s;
+            margin-top: 1rem;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .cancel-btn {
+            height: 3rem;
+            padding: 0 1rem;
+            border-radius: 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cancel-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .kakao-btn-container {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .kakao-btn {
+            background: #FEE500;
+            color: #000000;
+            border: none;
+            border-radius: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            height: 3rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            font-family: 'Outfit', sans-serif;
+            transition: all 0.2s;
+        }
+
+        .kakao-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .kakao-hint {
+            font-size: 0.8rem;
+            opacity: 0.6;
+            margin-top: 0.6rem;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .consent-box {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 0.8rem;
+            font-size: 0.8rem;
+            height: 100px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .checkbox-group input {
+            width: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loading" class="loading-overlay">
+        <div style="opacity: 0.5;">정보를 불러오는 중...</div>
+    </div>
+
+    <main id="layout-main">
+        <div class="header">
+            <a href="javascript:history.back()" class="back-link">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m15 18-6-6 6-6" />
+                </svg>
+            </a>
+            <h1>문의하기</h1>
+        </div>
+
+        <div class="container">
+            <div class="info-card">
+                <h2>문의 대상 방 정보</h2>
+                <div class="info-row">
+                    <span class="label">건물</span>
+                    <span class="value" id="room-building">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">호수</span>
+                    <span class="value" id="room-number">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">가격</span>
+                    <span class="value" id="room-price">-</span>
+                </div>
+            </div>
+
+            <div class="kakao-btn-container">
+                <button onclick="loginWithKakao()" class="kakao-btn">
+                    <img src="https://developers.kakao.com/assets/img/about/logos/kakaotalksharing/kakaotalk_sharing_btn_small.png"
+                        width="24" height="24" alt="" />
+                    카카오로 인증
+                </button>
+                <p class="kakao-hint">인증 시 이름, 생년월일, 연락처가 자동 입력됩니다.</p>
+                <div id="test-mode-section"
+                    style="display:none; margin-top: 1rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 1rem;">
+                    <button onclick="generateRandomInquiry()" class="cancel-btn"
+                        style="width: 100%; flex: none; background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.2); color: #a5b4fc;">
+                        🎲 문의 정보 랜덤 생성 (TEST)
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>이름</label>
+                <input type="text" id="req-name" class="form-input" placeholder="카카오 인증 시 자동 입력" readonly>
+            </div>
+            <div class="form-group">
+                <label>연락처</label>
+                <input type="text" id="req-phone" class="form-input" placeholder="카카오 인증 시 자동 입력" readonly>
+            </div>
+            <div class="form-group">
+                <label>생년월일</label>
+                <input type="text" id="req-birth" class="form-input" placeholder="카카오 인증 시 자동 입력" readonly>
+            </div>
+            <div class="form-group">
+                <label>문의 메세지</label>
+                <textarea id="req-memo" class="form-input" rows="5" placeholder="희망 방문 시간이나 궁금한 점을 남겨주세요"></textarea>
+            </div>
+
+            <div class="consent-box">
+                [개인정보 수집 및 이용 동의]<br><br>
+                1. 수집항목: 이름(필수), 출생연도(필수), 생일(필수), 전화번호(필수)<br>
+                2. 이용목적: 서비스 이용자 식별 및 문의 대응<br>
+                3. 보유기간: 목적 달성 시 즉시 파기 (단, 법령에 의거 보존 필요 시 해당 기간 동안 보관)<br>
+                4. 동의 거부 시 서비스 이용이 제한될 수 있습니다.
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="consent">
+                <label for="consent">개인정보 수집 및 이용에 동의합니다.</label>
+            </div>
+
+            <button class="submit-btn" onclick="submitInquiry()">문의 신청 완료</button>
+        </div>
+    </main>
+
+    <footer id="layout-footer">
+        <div class="footer-container" style="flex-wrap: wrap;">
+            <div class="footer-biz-name" onclick="toggleFooterInfo()">상호명: 김지선, 김세미 부동산</div>
+            <div class="footer-links">
+                <a href="/terms.html" class="footer-btn" style="text-decoration: none;">이용약관</a>
+                <a href="/privacy.html" class="footer-btn" style="text-decoration: none;">개인정보처리방침</a>
+            </div>
+            <div id="footer-biz-details" class="footer-info-details">
+                상호명: 김지선, 김세미 부동산<br>
+                대표자명: 김지선외 1명<br>
+                사업자등록번호: 640-31-00762<br>
+                주소: 경기도 수원시 팔달구 우만동 89-5 GS지에스타워 403호
+            </div>
+        </div>
+    </footer>
+
+    <script src="/js/common.js"></script>
+    <script>
+        const adId = new URLSearchParams(window.location.search).get('ad_id');
+        let currentAd = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!adId) {
+                alert('잘못된 접근입니다.');
+                location.href = '/rooms_public.html';
+                return;
+            }
+            await fetchAdDetail();
+            await initKakao();
+            await checkTestMode();
+            document.getElementById('loading').style.display = 'none';
+        });
+
+        async function checkTestMode() {
+            try {
+                const res = await fetch('/api/config/mode');
+                const data = await res.json();
+                if (data.mode === 'TEST') {
+                    document.getElementById('test-mode-section').style.display = 'block';
+                }
+            } catch (err) {
+                console.error('Failed to check mode:', err);
+            }
+        }
+
+        function generateRandomInquiry() {
+            const lastNames = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '한', '오', '서', '신', '권', '황', '안', '송', '전', '홍'];
+            const firstNames = ['민준', '서준', '도윤', '예준', '시우', '하준', '주원', '지호', '지후', '준서', '서윤', '서연', '지우', '하윤', '하은', '민서', '지유', '윤서', '지민', '채원'];
+            const randomName = lastNames[Math.floor(Math.random() * lastNames.length)] + firstNames[Math.floor(Math.random() * firstNames.length)];
+
+            const year = 2026 - (20 + Math.floor(Math.random() * 30));
+            const month = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');
+            const day = String(1 + Math.floor(Math.random() * 28)).padStart(2, '0');
+            const randomBirth = `${year}-${month}-${day}`;
+
+            const p2 = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+            const p3 = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+            const randomPhone = `010-${p2}-${p3}`;
+
+            document.getElementById('req-name').value = randomName;
+            document.getElementById('req-birth').value = randomBirth;
+            document.getElementById('req-phone').value = randomPhone;
+            document.getElementById('req-memo').value = "방 문의 드립니다. 내일 오후 2시쯤 방문 가능할까요?";
+
+            alert('랜덤 정보가 생성되었습니다.');
+        }
+
+        async function initKakao() {
+            let retries = 0;
+            while (!window.Kakao && retries < 20) {
+                await new Promise(r => setTimeout(r, 100));
+                retries++;
+            }
+
+            if (!window.Kakao) return;
+
+            try {
+                const res = await fetch('/api/config/kakao');
+                if (!res.ok) throw new Error('Failed to fetch config');
+                const data = await res.json();
+
+                if (data.kakaoKey) {
+                    if (!Kakao.isInitialized()) {
+                        Kakao.init(data.kakaoKey);
+                    }
+                }
+            } catch (err) {
+                console.error('Kakao Init Error:', err);
+            }
+        }
+
+        function loginWithKakao() {
+            if (!window.Kakao || !Kakao.isInitialized()) {
+                alert('카카오 SDK 초기화 중입니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
+
+            Kakao.Auth.login({
+                success: function (authObj) {
+                    Kakao.API.request({
+                        url: '/v2/user/me',
+                        success: function (res) {
+                            const kakaoAccount = res.kakao_account;
+                            console.log('Kakao Account Data:', kakaoAccount);
+                            if (kakaoAccount) {
+                                let updated = false;
+
+                                // Name
+                                const userName = kakaoAccount.name || (kakaoAccount.profile ? kakaoAccount.profile.nickname : '');
+                                if (userName) {
+                                    document.getElementById('req-name').value = userName;
+                                    updated = true;
+                                }
+
+                                // Phone
+                                if (kakaoAccount.phone_number) {
+                                    let phoneValue = kakaoAccount.phone_number.replace('+82 ', '0').replace(/[^0-9]/g, '');
+                                    if (phoneValue.startsWith('82')) {
+                                        phoneValue = '0' + phoneValue.substring(2);
+                                    }
+                                    document.getElementById('req-phone').value = formatPhone(phoneValue);
+                                    updated = true;
+                                }
+
+                                // Birth Date
+                                if (kakaoAccount.birthyear && kakaoAccount.birthday) {
+                                    const y = kakaoAccount.birthyear;
+                                    const m = kakaoAccount.birthday.substring(0, 2);
+                                    const d = kakaoAccount.birthday.substring(2, 4);
+                                    document.getElementById('req-birth').value = `${y}-${m}-${d}`;
+                                    updated = true;
+                                } else if (kakaoAccount.birthyear) {
+                                    document.getElementById('req-birth').value = kakaoAccount.birthyear;
+                                    updated = true;
+                                }
+
+                                if (updated) {
+                                    alert('카카오 인증 성공! 정보가 입력되었습니다.');
+                                } else {
+                                    alert('카카오 계정에서 정보를 가져오지 못했습니다.');
+                                }
+                            }
+                        },
+                        fail: function (error) {
+                            console.error(error);
+                            alert('사용자 정보를 가져오는데 실패했습니다.');
+                        }
+                    });
+                },
+                fail: function (err) {
+                    console.error(err);
+                    alert('카카오 로그인에 실패했습니다.');
+                }
+            });
+        }
+
+        async function fetchAdDetail() {
+            try {
+                const res = await fetch(`/api/postings/${adId}`);
+                if (!res.ok) throw new Error('정보를 불러오지 못했습니다.');
+                currentAd = await res.json();
+
+                document.getElementById('room-building').textContent = currentAd.building_name || '미지정';
+                document.getElementById('room-number').textContent = (currentAd.room_number || '') + '호';
+
+                const deposit = (currentAd.deposit || 0).toLocaleString();
+                const rent = (currentAd.rent || 0).toLocaleString();
+                document.getElementById('room-price').textContent = `${deposit} / ${rent}`;
+            } catch (err) {
+                console.error(err);
+                alert('방 정보를 불러오지 못했습니다.');
+                history.back();
+            }
+        }
+
+        async function submitInquiry() {
+            const name = document.getElementById('req-name').value.trim();
+            const phone = document.getElementById('req-phone').value.trim();
+            const birth = document.getElementById('req-birth').value.trim();
+            const memo = document.getElementById('req-memo').value.trim();
+            const consent = document.getElementById('consent').checked;
+
+            if (!name || !phone || !birth) {
+                alert('이름, 연락처, 생년월일을 모두 입력해주세요.');
+                return;
+            }
+
+            if (!consent) {
+                alert('개인정보 수집 및 이용에 동의해주세요.');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name, phone, birth, memo,
+                        landlordId: currentAd.created_by,
+                        buildingId: currentAd.building_id,
+                        buildingName: currentAd.building_name,
+                        roomNumber: currentAd.room_number
+                    })
+                });
+
+                if (res.ok) {
+                    alert(`${name}님, 문의가 접수되었습니다.\n곧 연락드리겠습니다!`);
+                    location.href = '/rooms_public.html';
+                } else {
+                    const data = await res.json();
+                    alert('문의 실패: ' + (data.error || '알 수 없는 오류'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('서버와 통신 중 오류가 발생했습니다.');
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,763 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buildings - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .container {
+            padding: 0;
+            margin: 0;
+            width: 100%;
+        }
+
+        .dynamic-field-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+
+        .small-input {
+            width: 60px !important;
+            padding: 0.4rem !important;
+            text-align: center;
+        }
+
+        .building-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            width: 100%;
+        }
+
+        .building-card {
+            width: 100%;
+            max-width: none;
+            padding: 2rem;
+        }
+
+        .room-list-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+
+        .room-list-table th,
+        .room-list-table td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .room-list-table th {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            opacity: 0.6;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .room-number-cell {
+            font-weight: 600;
+            color: var(--accent);
+            width: 30%;
+        }
+
+        .tenant-name-cell {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .tenant-na {
+            opacity: 0.3;
+            font-style: italic;
+        }
+
+        .event-memo {
+            cursor: pointer;
+            color: var(--accent);
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .event-memo:hover {
+            color: var(--primary);
+        }
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .search-input {
+            padding: 0 1rem;
+            height: 2.2rem;
+            border-radius: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 0.9rem;
+            width: 200px;
+            box-sizing: border-box;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .building-mgmt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+            margin-bottom: 0.2rem;
+            width: 100%;
+            box-sizing: border-box;
+            /* Important for padding */
+        }
+
+        .building-mgmt-header h1 {
+            font-size: 1.25rem;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            white-space: nowrap;
+            margin-right: 1rem;
+        }
+
+        .building-info-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        /* List Layout Styles */
+        .mgmt-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        .mgmt-item {
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s;
+        }
+
+        .mgmt-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .mgmt-item.expanded {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .mgmt-summary {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            gap: 0.8rem;
+            height: 4.5rem;
+            cursor: pointer;
+        }
+
+        .mgmt-left {
+            display: none;
+        }
+
+        .mgmt-center {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        .center-top {
+            flex: 7;
+            display: flex;
+            align-items: flex-end;
+            font-size: 1rem;
+            font-weight: 400;
+            padding-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .center-bottom {
+            flex: 3;
+            display: flex;
+            align-items: flex-start;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            gap: 0.5rem;
+            padding-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .mgmt-right {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .action-btn {
+            height: 2rem;
+            padding: 0 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 4rem;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .btn-edit {
+            background: rgba(99, 102, 241, 0.2);
+            color: #a5b4fc;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-edit:hover {
+            background: rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        /* Room Sub-list */
+        .mgmt-sublist {
+            display: none;
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .mgmt-item.expanded .mgmt-sublist {
+            display: block;
+        }
+
+        .room-item {
+            display: flex;
+            align-items: center;
+            padding: 0.6rem 1.5rem;
+            gap: 1rem;
+            height: 4rem;
+            /* Smaller height */
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .room-item:last-child {
+            border-bottom: none;
+        }
+
+        .room-left {
+            min-width: 3rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .room-badge {
+            background: rgba(99, 102, 241, 0.2);
+            color: #a5b4fc;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.3rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .room-center {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        .room-top {
+            flex: 7;
+            display: flex;
+            align-items: flex-end;
+            font-size: 0.95rem;
+            padding-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .room-bottom {
+            flex: 3;
+            display: flex;
+            align-items: flex-start;
+            font-size: 0.75rem;
+            opacity: 0.5;
+            padding-top: 2px;
+        }
+
+        .room-right {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            padding-right: 0.5rem;
+        }
+
+        .event-count-tag {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar will be rendered by JS -->
+
+    <div class="building-mgmt-header" id="building-header">
+        <h1>건물 관리</h1>
+    </div>
+    <div class="container" id="main-content">
+        <div id="building-toolbar" style="margin: 1rem 0; padding: 0 1.5rem;">
+            <!-- Toolbar populated by JS -->
+        </div>
+        <div class="building-grid" id="building-grid">
+            <!-- Buildings populated by JS -->
+        </div>
+    </div>
+
+    <!-- Room Event Input Modal -->
+    <div id="event-input-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 id="event-input-title">이벤트 추가</h2>
+            </div>
+            <div class="form-group">
+                <label>날짜</label>
+                <input type="date" id="event-date-input" class="form-input">
+            </div>
+            <div class="form-group">
+                <label>내용</label>
+                <textarea id="event-memo-input" class="form-input" rows="3" placeholder="이벤트 내용을 입력하세요"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEventInputModal()">취소</button>
+                <button class="btn" onclick="saveEvent()">완료</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Event Detail Modal -->
+    <div id="event-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 id="event-modal-title">방 이벤트 이력</h2>
+            </div>
+            <div id="event-list-container" style="max-height: 400px; overflow-y: auto; margin-top: 1rem;">
+                <!-- Events will be listed here -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEventModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results Modal -->
+    <div id="search-results-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>이벤트 검색 결과</h2>
+            </div>
+            <div id="search-results-container" style="max-height: 600px; overflow-y: auto; margin-top: 1rem;">
+                <!-- Search results will be listed here -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSearchModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="/js/common.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+        let allBuildings = [];
+        let currentEditingBuildingId = null;
+        let currentEventRoomId = null; // For Adding
+        let currentEventId = null;     // For Editing
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!user) {
+                window.location.href = '/index.html';
+                return;
+            }
+            renderNavbar();
+            await initBuildings();
+
+            // Close modals when clicking outside
+            window.addEventListener('click', function (event) {
+                if (event.target.classList.contains('modal')) {
+                    event.target.style.display = "none";
+                }
+            });
+        });
+
+        async function initBuildings() {
+            allBuildings = await loadBuildingsData();
+            renderBuildingManagement(allBuildings);
+        }
+
+        async function loadBuildingsData(searchKeyword = '') {
+            try {
+                const res = await fetch(`/api/landlord/${user.id}/buildings`);
+                if (!res.ok) throw new Error('Failed to fetch buildings');
+                const buildings = await res.json();
+                for (let b of buildings) {
+                    const addrRes = await fetch(`/api/buildings/${b.id}/addresses`);
+                    b.addresses = addrRes.ok ? await addrRes.json() : [];
+
+                    const roomRes = await fetch(`/api/buildings/${b.id}/rooms-with-events${searchKeyword ? `?q=${encodeURIComponent(searchKeyword)}` : ''}`);
+                    b.rooms = roomRes.ok ? await roomRes.json() : [];
+                }
+                return buildings;
+            } catch (err) {
+                console.error(err);
+                return [];
+            }
+        }
+
+        function renderBuildingManagement(buildings, filterId = 'ALL') {
+            const header = document.getElementById('building-header');
+            const toolbar = document.getElementById('building-toolbar');
+            const grid = document.getElementById('building-grid');
+            if (!grid) return;
+
+            const filtered = filterId === 'ALL' ? buildings : buildings.filter(b => b.id == filterId);
+
+            // Render Title & Dropdown & Add Button in Header
+            if (header) {
+                header.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                    <h1>건물 관리</h1>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button class="btn-glass" onclick="location.href='building_new.html'">건물 추가</button>
+                        <button class="btn-glass" onclick="location.href='event_new.html'" style="background: rgba(168, 85, 247, 0.2); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.3);">이벤트 추가</button>
+                    </div>
+                </div>
+                `;
+            }
+
+            // Render Search in Toolbar
+            if (toolbar) {
+                toolbar.innerHTML = `
+                <div style="display:flex; align-items:center; width:100%;">
+                    <div class="search-container" style="display: flex; gap: 0.5rem; flex:1; max-width:400px; align-items: center;">
+                        <input type="text" id="event-search" class="search-input" placeholder="이벤트 내용 검색..." style="flex:1;" onkeyup="if(event.key === 'Enter') searchEvents()">
+                        <button class="btn btn-secondary" style="white-space: nowrap; height: 2.2rem; padding: 0 1rem;" onclick="searchEvents()">검색</button>
+                    </div>
+                </div>
+                `;
+            }
+
+            grid.className = 'mgmt-list';
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div style="text-align:center; padding:3rem; opacity:0.5;">데이터가 없습니다.</div>';
+                return;
+            }
+
+            const listHtml = filtered.map(b => {
+                const address = b.addresses && b.addresses.length > 0 ? b.addresses[0].address : '-';
+
+                let roomsHtml = '<div style="padding:1rem; opacity:0.5; text-align:center;">방이 없습니다.</div>';
+                if (b.rooms && b.rooms.length > 0) {
+                    roomsHtml = b.rooms.map(r => {
+                        const memo = r.latest_event || '이벤트 없음';
+                        const date = r.latest_event_date || '-';
+                        return `
+                            <div class="room-item" onclick="location.href='buildings_room.html?id=${r.id}'" style="cursor:pointer;">
+                                <div class="room-left"><span class="room-badge">${r.room_number === '0' ? '전체' : r.room_number + '호'}</span></div>
+                                <div class="room-center">
+                                    <div class="room-top" title="${memo}">${memo}</div>
+                                    <div class="room-bottom">${date}</div>
+                                </div>
+                                <div class="room-right">
+                                    ${r.event_count > 0 ? `<span class="event-count-tag">이벤트 ${r.event_count}</span>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                return `
+                <div class="mgmt-item">
+                    <div class="mgmt-summary" onclick="this.parentElement.classList.toggle('expanded')">
+                        <div class="mgmt-left"></div>
+                        <div class="mgmt-center">
+                            <div class="center-top">${b.name}</div>
+                            <div class="center-bottom" title="${address}">${address}</div>
+                        </div>
+                        <div class="mgmt-right">
+                            <button class="action-btn btn-edit" onclick="event.stopPropagation(); location.href='building_new.html?id=${b.id}'">편집</button>
+                            <button class="action-btn btn-delete" onclick="event.stopPropagation(); deleteBuilding(${b.id})">삭제</button>
+                        </div>
+                    </div>
+                    <div class="mgmt-sublist">
+                        ${roomsHtml}
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            grid.innerHTML = listHtml;
+        }
+
+        async function filterBuildingManagement() {
+            const filterId = document.getElementById('building-filter').value;
+            renderBuildingManagement(allBuildings, filterId);
+        }
+
+        // --- Event Add/Edit Modal Logic ---
+
+        function openAddEventInputModal(roomId) {
+            currentEventRoomId = roomId;
+            currentEventId = null; // Add mode
+            document.getElementById('event-input-title').innerText = '이벤트 추가';
+            document.getElementById('event-date-input').value = new Date().toISOString().split('T')[0];
+            document.getElementById('event-memo-input').value = '';
+            document.getElementById('event-input-modal').style.display = 'flex';
+        }
+
+        // Unfortunately, the current API `rooms-with-events` only returns the LATEST event's memo and date, but NOT the ID of that event directly.
+        // We need to fetch the events for the room to find the ID of the latest event, or update the API to return the ID.
+        // However, looking at the server code: `SELECT r.*, (SELECT re.memo ...), (SELECT re.event_date ...)`
+        // It does NOT select the event ID. 
+        // Quick fix: Since we can't easily get the ID from the list view without API change, 
+        // let's assume "Edit" edits the *latest* event. We will fetch the Latest Event ID first.
+        async function openEditEventInputModal(roomId, date, memo) {
+            // Fetch events to find the latest ID
+            try {
+                const res = await fetch(`/api/rooms/${roomId}/events`);
+                const events = await res.json();
+                if (events.length > 0) {
+                    // The first one is the latest because of ORDER BY event_date DESC, id DESC
+                    const latest = events[0];
+                    currentEventRoomId = roomId;
+                    currentEventId = latest.id; // Edit mode
+
+                    document.getElementById('event-input-title').innerText = '이벤트 수정';
+                    document.getElementById('event-date-input').value = latest.event_date;
+                    document.getElementById('event-memo-input').value = latest.memo;
+                    document.getElementById('event-input-modal').style.display = 'flex';
+                } else {
+                    alert('수정할 이벤트가 없습니다.');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('이벤트 정보를 불러오지 못했습니다.');
+            }
+        }
+
+        function closeEventInputModal() {
+            document.getElementById('event-input-modal').style.display = 'none';
+        }
+
+        async function saveEvent() {
+            const date = document.getElementById('event-date-input').value;
+            const memo = document.getElementById('event-memo-input').value;
+
+            if (!date || !memo) {
+                alert('날짜와 내용을 모두 입력해주세요.');
+                return;
+            }
+
+            try {
+                if (currentEventId) {
+                    // Update
+                    const res = await fetch(`/api/room-events/${currentEventId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ event_date: date, memo })
+                    });
+                    if (!res.ok) throw new Error('Failed to update event');
+                } else {
+                    // Create
+                    const res = await fetch(`/api/rooms/${currentEventRoomId}/events`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ event_date: date, memo })
+                    });
+                    if (!res.ok) throw new Error('Failed to create event');
+                }
+
+                alert('저장되었습니다.');
+                closeEventInputModal();
+                await initBuildings(); // Refresh the list
+            } catch (err) {
+                alert('오류 발생: ' + err.message);
+            }
+        }
+
+        async function deleteBuilding(buildingId) {
+            if (!confirm('정말로 이 건물을 삭제하시겠습니까?')) return;
+            await fetch(`/api/buildings/${buildingId}`, { method: 'DELETE' });
+            await initBuildings();
+        }
+
+        async function addNewAddress(buildingId) {
+            const address = prompt('추가할 주소를 입력하세요:');
+            if (!address) return;
+            await fetch(`/api/buildings/${buildingId}/addresses`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address })
+            });
+            await initBuildings();
+        }
+
+        async function deleteAddress(addressId) {
+            if (!confirm('주소를 삭제하시겠습니까?')) return;
+            await fetch(`/api/addresses/${addressId}`, { method: 'DELETE' });
+            await initBuildings();
+        }
+
+        async function searchEvents() {
+            const keyword = document.getElementById('event-search').value.trim();
+            if (!keyword) {
+                alert('검색어를 입력하세요.');
+                return;
+            }
+
+            // Fetch all with keyword
+            const buildingsWithEvents = await loadBuildingsData(keyword);
+
+            // Flatten results
+            let results = [];
+            buildingsWithEvents.forEach(b => {
+                if (b.rooms && b.rooms.length > 0) {
+                    b.rooms.forEach(r => {
+                        if (r.latest_event) { // This room has a matching event
+                            results.push({
+                                buildingName: b.name,
+                                roomNumber: r.room_number,
+                                eventDate: r.latest_event_date,
+                                eventMemo: r.latest_event
+                            });
+                        }
+                    });
+                }
+            });
+
+            // Sort by date DESC
+            results.sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate));
+
+            // Show in modal
+            const container = document.getElementById('search-results-container');
+            if (results.length === 0) {
+                container.innerHTML = '<p style="text-align:center; padding:2rem; opacity:0.5;">검색 결과가 없습니다.</p>';
+            } else {
+                container.innerHTML = `
+                    <table class="room-list-table">
+                        <thead>
+                            <tr>
+                                <th>건물</th>
+                                <th>방 번호</th>
+                                <th>날짜</th>
+                                <th>메모</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${results.map(r => `
+                                <tr>
+                                    <td>${r.buildingName}</td>
+                                    <td>${r.roomNumber}호</td>
+                                    <td style="white-space:nowrap;">${r.eventDate}</td>
+                                    <td>${r.eventMemo}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+            document.getElementById('search-results-modal').style.display = 'flex';
+        }
+
+        function closeSearchModal() {
+            document.getElementById('search-results-modal').style.display = 'none';
+        }
+
+        async function showRoomEvents(roomId, title) {
+            document.getElementById('event-modal-title').textContent = `${title} 이벤트 이력`;
+            const container = document.getElementById('event-list-container');
+            container.innerHTML = '<p style="text-align:center; padding:1rem; opacity:0.5;">로딩 중...</p>';
+            document.getElementById('event-modal').style.display = 'flex';
+
+            try {
+                const res = await fetch(`/api/rooms/${roomId}/events`);
+                const events = await res.json();
+
+                if (events.length === 0) {
+                    container.innerHTML = '<p style="text-align:center; padding:1rem; opacity:0.5;">이벤트 내역이 없습니다.</p>';
+                } else {
+                    container.innerHTML = events.map(e => `
+                        <div style="padding:1rem; border-bottom:1px solid rgba(255,255,255,0.05);">
+                            <div style="font-size:0.8rem; opacity:0.5; margin-bottom:0.4rem;">${e.event_date}</div>
+                            <div style="font-size:0.95rem;">${e.memo}</div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {
+                container.innerHTML = '<p style="text-align:center; padding:1rem; color:var(--danger);">데이터를 불러오지 못했습니다.</p>';
+            }
+        }
+
+        function closeEventModal() {
+            document.getElementById('event-modal').style.display = 'none';
+        }
+    </script>
+</body>
+
+</html>

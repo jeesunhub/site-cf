@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>안녕 - 멤버 서비스</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #a855f7;
+            --accent: #818cf8;
+            --bg: #0f172a;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --fg: #f8fafc;
+            --text: #f8fafc;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        input,
+        select,
+        textarea,
+        button {
+            font-family: inherit;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
+            color: var(--fg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        #layout-main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            position: relative;
+        }
+
+        #layout-footer {
+            width: 100%;
+            padding: 0.5rem 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(15, 23, 42, 0.9);
+            box-sizing: border-box;
+        }
+
+        .footer-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .footer-biz-name {
+            font-size: 0.5rem;
+            color: var(--text);
+            opacity: 0.9;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .footer-info-details {
+            display: none;
+            width: 100%;
+            padding: 1rem 0;
+            font-size: 0.5rem;
+            color: var(--text);
+            opacity: 0.6;
+            text-align: left;
+            line-height: 1.5;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: 0.5rem;
+        }
+
+        .footer-info-details.show {
+            display: block;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 0.8rem;
+        }
+
+        .footer-btn {
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 0.5rem;
+            cursor: pointer;
+            padding: 0;
+            opacity: 0.4;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+        }
+
+        .footer-btn:hover {
+            opacity: 0.8;
+        }
+
+        .login-card {
+            padding: 0;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border-radius: 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+            color: white;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            border-radius: 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: linear-gradient(to right, rgba(99, 102, 241, 0.4), rgba(168, 85, 247, 0.4));
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(to right, rgba(99, 102, 241, 0.6), rgba(168, 85, 247, 0.6));
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .error {
+            color: #ef4444;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .signup-links {
+            margin-top: 2rem;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .small-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.8rem;
+            font-weight: 400;
+            cursor: pointer;
+            width: auto;
+            padding: 0.5rem;
+            transition: color 0.2s;
+        }
+
+        .small-btn:hover {
+            color: white;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            /* 2 columns to prevent overflow */
+            gap: 0.8rem;
+            margin-bottom: 2rem;
+        }
+
+        .action-chip {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.8rem 1rem;
+            border-radius: 1rem;
+            font-size: 0.85rem;
+            color: var(--fg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Center content */
+            gap: 0.6rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            /* Take full width of grid cell */
+            box-sizing: border-box;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .action-chip:last-child {
+            grid-column: span 2;
+            /* "Info" button spans full width at the bottom */
+        }
+
+        .action-chip:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(99, 102, 241, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .badge-count {
+            background: var(--primary);
+            color: white;
+            padding: 0.1rem 0.5rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 1.2rem;
+            text-align: center;
+        }
+
+        /* 3D Cube Styles */
+        .scene {
+            width: 100%;
+            height: 120px;
+            perspective: 600px;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .cube {
+            width: 200px;
+            height: 60px;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: translateZ(-30px);
+            transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .cube__face {
+            position: absolute;
+            width: 200px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: white;
+            background: transparent;
+            border: none;
+            backface-visibility: hidden;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* 
+           0: Front (한국어)
+           1: Bottom (배트남어) - rotateX(-90)
+           2: Back (영어) - rotateX(-180)
+           3: Top (미얀마어) - rotateX(-270)
+           4: Left (중국어) - rotateY(-90) - Wait, user asked for 6. Let's do 4 horizontal, then 2 vertical or just continuous X?
+           Actually, let's just do rotateX for all 6 to simplify, since it's a "rotating 면체".
+        */
+        .cube__face--front {
+            transform: rotateY(0deg) translateZ(30px);
+        }
+
+        .cube__face--bottom {
+            transform: rotateX(-90deg) translateZ(30px);
+        }
+
+        .cube__face--back {
+            transform: rotateX(-180deg) translateZ(30px);
+        }
+
+        .cube__face--top {
+            transform: rotateX(-270deg) translateZ(30px);
+        }
+
+        /* For 6 faces, we need more depth or different layout. Let's use rotateY for the last two? 
+           Actually, let's keep it simple: rotateX 0, 90, 180, 270... and then 360, 450.
+        */
+    </style>
+</head>
+
+<body>
+    <main id="layout-main">
+        <div class="login-card">
+            <div class="scene">
+                <div class="cube" id="greeting-cube">
+                    <div class="cube__face cube__face--front">안녕</div>
+                    <div class="cube__face cube__face--bottom">Xin chào</div>
+                    <div class="cube__face cube__face--back">Hello</div>
+                    <div class="cube__face cube__face--top">Mingalaba</div>
+                    <div class="cube__face" style="transform: rotateY(90deg) translateZ(30px) rotateX(0deg);">你好</div>
+                    <div class="cube__face" style="transform: rotateY(-90deg) translateZ(30px) rotateX(0deg);">こんにちは
+                    </div>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <div class="action-chip" onclick="location.href='/rooms_public.html'">
+                    <span>방 있어요</span>
+                    <span class="badge-count" id="room-count">0</span>
+                </div>
+                <div class="action-chip" onclick="location.href='/items_public.html'">
+                    <span>물건 공유</span>
+                    <span class="badge-count" id="item-count">0</span>
+                </div>
+                <div class="action-chip" onclick="location.href='/info_public.html'">
+                    <span>정보 공유해요</span>
+                    <span class="badge-count" id="info-count">0</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>아이디</label>
+                <input type="text" id="username" placeholder="아이디를 입력하세요">
+            </div>
+            <div class="input-group">
+                <label>비밀번호</label>
+                <input type="password" id="password" placeholder="비밀번호를 입력하세요">
+            </div>
+            <button class="login-btn" onclick="login()">로그인</button>
+            <p id="error-msg" class="error">로그인에 실패했습니다.</p>
+
+            <div class="signup-links">
+                <button class="small-btn" onclick="location.href='/user_new.html?role=landlord'">임대인 가입 신청</button>
+                <button class="small-btn" onclick="location.href='/user_new.html?role=tenant'">세입자 가입 신청</button>
+            </div>
+        </div>
+    </main>
+
+    <footer id="layout-footer">
+        <div class="footer-container" style="flex-wrap: wrap;">
+            <div class="footer-biz-name" onclick="toggleFooterInfo()">상호명: 김지선, 김세미 부동산</div>
+            <div class="footer-links">
+                <a href="/terms.html" class="footer-btn" style="text-decoration: none;">이용약관</a>
+                <a href="/privacy.html" class="footer-btn" style="text-decoration: none;">개인정보처리방침</a>
+            </div>
+            <div id="footer-biz-details" class="footer-info-details">
+                상호명: 김지선, 김세미 부동산<br>
+                대표자명: 김지선외 1명<br>
+                사업자등록번호: 640-31-00762<br>
+                주소: 경기도 수원시 팔달구 우만동 89-5 GS지에스타워 403호
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCounts();
+            setInterval(rotateGreetings, 3000);
+        });
+
+        function toggleFooterInfo() {
+            const details = document.getElementById('footer-biz-details');
+            if (details) {
+                details.classList.toggle('show');
+            }
+        }
+
+        async function loadCounts() {
+            try {
+                const r = await fetch('/api/public/stats');
+                const d = await r.json();
+                document.getElementById('room-count').textContent = d.roomCount || 0;
+                document.getElementById('item-count').textContent = d.itemCount || 0;
+                document.getElementById('info-count').textContent = d.infoCount || 0;
+            } catch (e) { }
+        }
+
+        // Cube Rotation Logic
+        let currentStep = 0;
+        const rotations = [
+            'translateZ(-30px) rotateX(0deg)',
+            'translateZ(-30px) rotateX(90deg)',
+            'translateZ(-30px) rotateX(180deg)',
+            'translateZ(-30px) rotateX(270deg)',
+            'translateZ(-30px) rotateY(-90deg)',
+            'translateZ(-30px) rotateY(90deg)'
+        ];
+
+        function rotateGreetings() {
+            const cube = document.getElementById('greeting-cube');
+            if (cube) {
+                currentStep = (currentStep + 1) % rotations.length;
+                cube.style.transform = rotations[currentStep];
+            }
+        }
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    window.location.href = '/dashboard.html';
+                } else {
+                    if (response.status === 404) {
+                        alert(data.error); // "없는 사용자입니다."
+                        errorMsg.style.display = 'none';
+                    } else {
+                        errorMsg.style.display = 'block';
+                        errorMsg.innerText = data.error || '로그인 실패';
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                errorMsg.style.display = 'block';
+                errorMsg.innerText = '서버 연결 오류';
+            }
+        }
+    </script>
+</body>
+
+</html>

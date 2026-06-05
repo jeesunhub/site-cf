@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>물건 공유 - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .container {
+            padding: 0;
+            margin: 0;
+            width: 100%;
+        }
+
+        .notice-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .notice-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.02);
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .notice-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .notice-summary {
+            display: flex;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            gap: 1rem;
+            height: 4.5rem;
+        }
+
+        .item-icon {
+            width: 2.8rem;
+            height: 2.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(168, 85, 247, 0.2);
+            color: #d8b4fe;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .notice-text-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        .notice-title {
+            font-size: 1rem;
+            color: #f8fafc;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .notice-meta {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .btn-add {
+            padding: 6.4px 1rem;
+            line-height: 20.45px;
+            background: rgba(99, 102, 241, 0.3);
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: white;
+            text-decoration: none;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-add:hover {
+            background: rgba(99, 102, 241, 0.45);
+            border-color: rgba(99, 102, 241, 0.6);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+
+        .notice-right {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-btn {
+            height: 2rem;
+            padding: 0 0.8rem;
+            border-radius: 0.4rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .status-advertising {
+            background: rgba(99, 102, 241, 0.2);
+            color: #a5b4fc;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .status-completed {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .status-drawing {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .status-default {
+            background: rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+        }
+
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .building-badge {
+            font-size: 0.7rem;
+            color: #d8b4fe;
+            background: rgba(168, 85, 247, 0.2);
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.3rem;
+            white-space: nowrap;
+        }
+
+        .notice-thumbnail {
+            width: 4.5rem;
+            height: 3.2rem;
+            border-radius: 0.5rem;
+            object-fit: cover;
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .building-item-badge {
+            width: 4.5rem;
+            height: 3.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(168, 85, 247, 0.1);
+            color: #d8b4fe;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-align: center;
+            line-height: 1.2;
+            flex-shrink: 0;
+            padding: 0.2rem;
+            word-break: keep-all;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 3.5rem;
+            /* Below header */
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: flex-start;
+            /* Start from top */
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            padding-top: 1rem;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-height: calc(100vh - 5rem);
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-content h3 {
+            margin: 0 0 1rem 0;
+            color: #f8fafc;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 0.3rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.7rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            color: white;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.8rem;
+            margin-top: 1.5rem;
+        }
+
+        .photo-preview-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .photo-preview-item {
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 0.3rem;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        .photo-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .warning-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            padding: 0.8rem;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+            /* Changed margin */
+            display: flex;
+            flex-direction: column;
+            /* Vertical layout */
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .warning-badge {
+            background: #ef4444;
+            color: white;
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.3rem;
+            font-size: 0.7rem;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .building-badge {
+            width: 5rem;
+            height: 3.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(168, 85, 247, 0.1);
+            color: #d8b4fe;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-align: center;
+            line-height: 1.2;
+            flex-shrink: 0;
+            padding: 0.2rem;
+            word-break: keep-all;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar -->
+    <div class="header">
+        <h1>물건 공유</h1>
+        <a href="item_new.html" class="btn-add">내놓기</a>
+    </div>
+
+    <div class="container">
+        <ul id="item-list" class="notice-list">
+            <div style="text-align:center; opacity:0.5; padding:3rem;">로딩 중...</div>
+        </ul>
+    </div>
+
+
+    <script src="/js/common.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+        let selectedFiles = [];
+        let currentEditItemId = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderNavbar();
+            fetchItems();
+        });
+
+        async function fetchItems() {
+            try {
+                let url = `/api/postings?type=item`;
+                if (user) {
+                    url += `&viewer_id=${user.id}&viewer_role=${user.role}`;
+                }
+                const res = await fetch(url);
+                const items = await res.json();
+                renderItems(items);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderItems(items) {
+            const list = document.getElementById('item-list');
+            list.innerHTML = '';
+
+            if (!Array.isArray(items) || items.length === 0) {
+                list.innerHTML = '<div style="text-align:center; opacity:0.5; padding:3rem;">내놓은 물건이 없습니다.</div>';
+                return;
+            }
+
+            items.forEach(item => {
+                const li = document.createElement('li');
+                const isMine = user && (item.created_by === user.id);
+                li.className = `notice-item ${isMine ? 'mine' : ''}`;
+                if (isMine) {
+                    li.style.background = 'rgba(99, 102, 241, 0.05)';
+                }
+                li.onclick = () => window.location.href = `/item_detail.html?id=${item.id}`;
+
+                const priceValue = item.price ? (item.price / 1).toLocaleString() + '원' : '';
+                let owner = item.owner_login_id || '알 수 없음';
+                // If is_anonymous is 1 (true), mask the owner unless it's the current user's own post
+                if (item.is_anonymous && !isMine) owner = '익명';
+
+                const building = item.building_name || '건물미정';
+                const dateStr = item.created_at ? item.created_at.split(' ')[0] : '';
+
+                // Badge style based on status
+                let statusClass = 'status-default';
+                let statusLabel = '대기';
+                if (item.status === 'advertising') { statusClass = 'status-advertising'; statusLabel = '진행중'; }
+                else if (item.status === 'completed') { statusClass = 'status-completed'; statusLabel = '완료'; }
+                else if (item.status === 'drawing') { statusClass = 'status-drawing'; statusLabel = '추첨중'; }
+
+                let actionButtons = `<button class="action-btn ${statusClass}" style="cursor:default;" onclick="event.stopPropagation()">${statusLabel}</button>`;
+
+                if (user && user.role === 'admin') {
+                    actionButtons += `<button class="action-btn btn-delete" onclick="event.stopPropagation(); deleteAd(${item.id})">삭제</button>`;
+                }
+
+                const myBadge = isMine ? `<span style="background:var(--primary); color:white; font-size:0.65rem; padding:1px 4px; border-radius:3px; margin-right:4px; font-weight:600;">내 글</span>` : '';
+
+                const leftGroup = item.main_image
+                    ? `<img src="${item.main_image}" class="notice-thumbnail">`
+                    : `<div class="building-badge">${building}</div>`;
+
+                li.innerHTML = `
+                    <div class="notice-summary">
+                        ${leftGroup}
+                        <div class="notice-text-group">
+                            <div class="notice-title" style="display:flex; align-items:center; gap:0.5rem;">
+                                ${myBadge}${item.title} 
+                                <span style="font-size:0.8rem; color:#94a3b8; font-weight:400;">${priceValue}</span>
+                            </div>
+                            <div class="notice-meta">${building} | ${dateStr} ${owner}</div>
+                        </div>
+                        <div class="notice-right">
+                             ${actionButtons}
+                        </div>
+                    </div>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        // --- Modal Logic ---
+
+        async function deleteAd(id) {
+            if (!confirm('정말로 삭제하시겠습니까? 관련 사진과 물건 정보가 모두 삭제됩니다.')) return;
+            try {
+                const res = await fetch(`/api/postings/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    alert('삭제되었습니다.');
+                    fetchItems();
+                } else {
+                    const err = await res.json();
+                    alert('삭제 실패: ' + err.error);
+                }
+            } catch (e) {
+                console.error(e);
+                alert('삭제 중 오류가 발생했습니다.');
+            }
+        }
+
+    </script>
+</body>
+
+</html>

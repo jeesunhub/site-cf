@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>퇴실 관리 - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 70px;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.25rem;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .form-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .section-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .tenant-selector-group {
+            margin-bottom: 2rem;
+        }
+
+        .tenant-selector-group label {
+            display: block;
+            margin-bottom: 9.6px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .payment-history {
+            margin-top: 2rem;
+        }
+
+        .payment-item {
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .payment-item:last-child {
+            border-bottom: none;
+        }
+
+        .payment-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .payment-title {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #f1f5f9;
+        }
+
+        .payment-meta {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .payment-amount {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--primary);
+        }
+
+        .status-badge {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .status-paid {
+            background: rgba(34, 197, 94, 0.2);
+            color: #a7f3d0;
+        }
+
+        .status-unpaid {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        .status-partial {
+            background: rgba(234, 179, 8, 0.2);
+            color: #fef08a;
+        }
+
+        .status-icon {
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+        }
+
+        .status-icon.paid {
+            color: #4ade80;
+        }
+
+        .status-icon.partial {
+            color: #fbbf24;
+        }
+
+        .status-icon.unpaid {
+            color: #f87171;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .settlement-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .settlement-table th,
+        .settlement-table td {
+            padding: 0.6rem 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-variant-numeric: tabular-nums;
+            font-size: 0.85rem;
+            white-space: normal;
+        }
+
+        .settlement-table td.col-amount {
+            white-space: nowrap;
+        }
+
+        .settlement-table th {
+            background: rgba(255, 255, 255, 0.03);
+            font-weight: 600;
+            color: var(--text);
+            width: 50%;
+        }
+
+        .settlement-table th.col-amount,
+        .settlement-table td.col-amount {
+            width: 30%;
+            text-align: right;
+        }
+
+        .settlement-table th.col-status,
+        .settlement-table td.col-status {
+            width: 20%;
+            text-align: center;
+        }
+
+        .settlement-table tr:last-child td,
+        .settlement-table tr:last-child th {
+            border-bottom: none;
+        }
+
+        .settlement-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            text-align: right;
+            font-family: inherit;
+        }
+
+        .settlement-explanation {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(99, 102, 241, 0.05);
+            border-radius: 1rem;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+        }
+
+        .settlement-explanation strong {
+            color: var(--primary);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1.5rem;
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            opacity: 0.5;
+            color: var(--text);
+        }
+
+        .info-value {
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+
+<body class="has-back-button">
+    <div class="page-header">
+        <h1>퇴실 관리 <span id="selected-date"
+                style="font-size: 0.9rem; opacity: 0.8; color: var(--text); -webkit-text-fill-color: var(--text); margin-left: 0.5rem; font-weight: 400;"></span>
+        </h1>
+        <button onclick="downloadScreenshot()" class="btn-primary"
+            style="padding: 0.4rem 0.8rem; font-size: 0.75rem; border-radius: 0.5rem; background: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.4); color: white; cursor: pointer;">
+            화면 저장 (이미지)
+        </button>
+    </div>
+
+    <div class="form-container">
+        <div class="tenant-selector-group">
+            <label>세입자 선택</label>
+            <select id="tenant-select" class="form-input" onchange="handleTenantChange()">
+                <option value="">세입자를 선택하세요</option>
+            </select>
+        </div>
+
+        <div id="contract-info-container" class="payment-history">
+            <!-- Contract Info will be rendered here -->
+        </div>
+
+        <div id="settlement-container" class="payment-history">
+            <!-- Settlement will be rendered here -->
+        </div>
+
+        <div id="settlement-summary-container">
+            <!-- Settlement Summary will be rendered here -->
+        </div>
+
+        <div id="payment-history-container" class="payment-history">
+            <!-- Payment history will be rendered here -->
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+        const urlParams = new URLSearchParams(window.location.search);
+        const selectedDateStr = urlParams.get('date');
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!user) {
+                window.location.href = '/index.html';
+                return;
+            }
+            renderNavbar();
+
+            // Override back button behavior
+            const backBtn = document.querySelector('.nav-back-btn');
+            if (backBtn) {
+                backBtn.onclick = (e) => {
+                    e.preventDefault();
+                    window.location.href = '/dashboard.html';
+                };
+            }
+
+            if (selectedDateStr) {
+                // Parse YYYY-MM-DD safely without timezone shifts
+                const [y, m, d] = selectedDateStr.split('-');
+                document.getElementById('selected-date').textContent = `${y}년 ${parseInt(m)}월 ${parseInt(d)}일`;
+            }
+
+            await loadTenants();
+        });
+
+        let allTenants = [];
+        let settlementState = {
+            paidDeposit: 0,
+            unpaidOthers: 0,
+            dailyAmount: 0,
+            cleaningUnpaid: 0
+        };
+
+        function updateSettlementSummary() {
+            const commVal = document.getElementById('input-commission')?.value || '0';
+            const elecVal = document.getElementById('input-electricity')?.value || '0';
+            const gasVal = document.getElementById('input-gas')?.value || '0';
+
+            const comm = parseInt(commVal.replace(/,/g, '')) || 0;
+            const elec = parseInt(elecVal.replace(/,/g, '')) || 0;
+            const gas = parseInt(gasVal.replace(/,/g, '')) || 0;
+
+            const total = settlementState.paidDeposit - settlementState.unpaidOthers
+                - settlementState.dailyAmount - settlementState.cleaningUnpaid
+                - comm - elec - gas;
+
+            const container = document.getElementById('settlement-summary-container');
+            if (!container) return;
+
+            const absTotal = Math.abs(total);
+            const formatted = `<span style="color: #f97316;">${formatCurrency(absTotal)}원</span>`;
+
+            let amountText = "";
+            let title = "정산 금액";
+
+            if (total > 0) {
+                if (user.role === 'tenant') {
+                    amountText = `${formatted}을 받아야 합니다.`;
+                } else {
+                    amountText = `${formatted}을 돌려드려야 합니다.`;
+                }
+            } else if (total < 0) {
+                if (user.role === 'tenant') {
+                    amountText = `${formatted}을 납부해야 합니다.`;
+                } else {
+                    amountText = `${formatted}을 받아야 합니다.`;
+                }
+            } else {
+                amountText = "정산할 금액이 없습니다.";
+            }
+
+            container.innerHTML = `
+                <div class="payment-history">
+                    <h2 class="section-title">${title}</h2>
+                    <div style="padding: 0.5rem 0;">
+                        <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; opacity: 0.8;">최종 정산 결과</div>
+                        <div style="font-size: 1.1rem; font-weight: 700; transition: all 0.2s;">${amountText}</div>
+                        <div style="font-size: 0.75rem; opacity: 0.5; margin-top: 0.6rem;">* 수수료, 가스, 전기 금액 입력 시 실시간 반영됩니다.</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadTenants() {
+            try {
+                const res = await fetch(`/api/tenants/active-list?role=${user.role}&user_id=${user.id}`);
+                allTenants = await res.json();
+
+                // Filter out terminated tenants
+                let activeTenants = allTenants.filter(t => t.status !== '종료');
+
+                // Sort by end date (closest first)
+                activeTenants.sort((a, b) => {
+                    const dateA = a.contract_end_date || '9999-12-31';
+                    const dateB = b.contract_end_date || '9999-12-31';
+                    return dateA.localeCompare(dateB);
+                });
+
+                const select = document.getElementById('tenant-select');
+                activeTenants.forEach(t => {
+                    const option = document.createElement('option');
+                    option.value = t.user_id;
+                    option.textContent = `${t.nickname || '이름 없음'}(종료일:${t.contract_end_date || '기간 무제한'})`;
+                    select.appendChild(option);
+                });
+
+                // Auto-select and lock if user is a tenant
+                if (user.role === 'tenant') {
+                    const myId = user.id || user.user_id;
+                    select.value = myId;
+                    select.disabled = true;
+                    // Trigger load history immediately
+                    handleTenantChange();
+                }
+            } catch (err) {
+                console.error('Failed to load tenants:', err);
+            }
+        }
+
+        async function handleTenantChange() {
+            const tenantId = document.getElementById('tenant-select').value;
+            if (!tenantId) {
+                document.getElementById('contract-info-container').innerHTML = '';
+                document.getElementById('settlement-container').innerHTML = '';
+                document.getElementById('payment-history-container').innerHTML = '';
+                return;
+            }
+
+            const tenant = allTenants.find(t => String(t.user_id) === String(tenantId));
+
+            renderContractInfo(tenant);
+
+            // Fetch billing history first and share data
+            let bills = [];
+            try {
+                const res = await fetch(`/api/tenant/${tenantId}/billing`);
+                bills = await res.json();
+            } catch (err) {
+                console.error('Failed to load billing for settlement:', err);
+            }
+
+            await calculateSettlement(tenant, bills);
+            await renderTenantHistory(bills);
+        }
+
+        function renderContractInfo(tenant) {
+            const container = document.getElementById('contract-info-container');
+            if (!tenant) return;
+
+            container.innerHTML = `
+                <h2 class="section-title">계약 정보</h2>
+                <div class="info-grid">
+                    <div class="info-item"><span class="info-label">건물/호수</span><span class="info-value">${tenant.building} ${tenant.room_number}호</span></div>
+                    <div class="info-item"><span class="info-label">계약 기간</span><span class="info-value">${tenant.contract_start_date} ~ ${tenant.contract_end_date || '기간 무제한'}</span></div>
+                    <div class="info-item"><span class="info-label">보증금</span><span class="info-value">${formatCurrency(tenant.deposit || 0)}</span></div>
+                    <div class="info-item"><span class="info-label">월세/관리비</span><span class="info-value">${formatCurrency(tenant.rent || 0)} / ${formatCurrency(tenant.maintenance_fee || 0)}</span></div>
+                </div>
+            `;
+        }
+
+        function getStatusIconHtml(paidAmount, totalAmount) {
+            if (totalAmount <= 0) return '-';
+            if (paidAmount >= totalAmount) return '<span class="status-icon paid" title="완납">✔</span>';
+            if (paidAmount > 0) return '<span class="status-icon partial" title="부분완납">▲</span>';
+            return '<span class="status-icon unpaid" title="미납">✕</span>';
+        }
+
+        async function calculateSettlement(tenant, bills = []) {
+            const container = document.getElementById('settlement-container');
+            if (!tenant || !selectedDateStr) return;
+
+            const moveOutDate = new Date(selectedDateStr);
+            const contractEnd = tenant.contract_end_date ? new Date(tenant.contract_end_date) : null;
+            const contractStart = new Date(tenant.contract_start_date);
+            const monthlyTotal = (tenant.rent || 0) + (tenant.maintenance_fee || 0);
+
+            // Commission logic: if moveOutDate is at least 2 weeks before contractEnd
+            let showCommission = false;
+            if (contractEnd) {
+                const diffTime = contractEnd - moveOutDate;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays >= 14) showCommission = true;
+            }
+
+            let monthlyRowsHtml = '';
+            let currentPeriodStart = new Date(contractStart);
+            let lastFullPeriodEnd = new Date(contractStart);
+            lastFullPeriodEnd.setDate(lastFullPeriodEnd.getDate() - 1); // Point to day before start
+
+            const depositBill = bills.find(b => b.type === 'deposit');
+            const depositPaid = depositBill ? depositBill.payments.reduce((sum, p) => sum + p.matched_amount, 0) : 0;
+            const cleaningBill = bills.find(b => b.type === 'cleaning_fee');
+            const cleaningPaid = cleaningBill ? cleaningBill.payments.reduce((sum, p) => sum + p.matched_amount, 0) : 0;
+
+            settlementState.paidDeposit = depositPaid;
+            settlementState.unpaidOthers = 0;
+
+            // 1. Calculate Full Monthly Periods based on contract start day
+            while (true) {
+                let nextPeriodStart = new Date(currentPeriodStart);
+                nextPeriodStart.setMonth(nextPeriodStart.getMonth() + 1);
+                let currentPeriodEnd = new Date(nextPeriodStart);
+                currentPeriodEnd.setDate(currentPeriodEnd.getDate() - 1);
+
+                if (currentPeriodEnd > moveOutDate) break;
+
+                const billYear = currentPeriodEnd.getFullYear();
+                const billMonth = currentPeriodEnd.getMonth() + 1;
+                const monthStr = `${billYear}-${String(billMonth).padStart(2, '0')}`;
+
+                // Find bill for this period (billed at the end of the period for postpaid)
+                const rentBill = bills.find(b => b.bill_month === monthStr && (b.type === 'monthly_rent' || b.type === 'maintenance_fee'));
+                const paidAmt = rentBill ? rentBill.payments.reduce((sum, p) => sum + p.matched_amount, 0) : 0;
+                const totalAmt = rentBill ? rentBill.total_amount : monthlyTotal;
+
+                monthlyRowsHtml += `
+                    <tr>
+                        <th style="font-weight: 500;">
+                            ${String(billYear).slice(2)}년 ${billMonth}월 월세<br>
+                            <span style="font-size: 0.7rem; opacity: 0.6; font-weight: 400;">(${formatLocalDate(currentPeriodStart).slice(5)} ~ ${formatLocalDate(currentPeriodEnd).slice(5)})</span>
+                        </th>
+                        <td class="col-amount">${formatCurrency(totalAmt)}</td>
+                        <td class="col-status">${getStatusIconHtml(paidAmt, totalAmt)}</td>
+                    </tr>`;
+
+                settlementState.unpaidOthers += (totalAmt - paidAmt);
+
+                lastFullPeriodEnd = new Date(currentPeriodEnd);
+                currentPeriodStart = nextPeriodStart;
+            }
+
+            // 2. Calculate Daily Partial Periods (Splitting by calendar months)
+            let dailyRowsHtml = '';
+            let dailyTotal = 0;
+            let explanationHtml = '';
+
+            let dailyIter = new Date(lastFullPeriodEnd);
+            dailyIter.setDate(dailyIter.getDate() + 1);
+
+            while (dailyIter <= moveOutDate) {
+                let startOfPartial = new Date(dailyIter);
+                let endOfCalendarMonth = new Date(dailyIter.getFullYear(), dailyIter.getMonth() + 1, 0);
+                let endOfPartial = (endOfCalendarMonth < moveOutDate) ? endOfCalendarMonth : new Date(moveOutDate);
+
+                const days = Math.round((endOfPartial - startOfPartial) / (1000 * 60 * 60 * 24)) + 1;
+                const totalDaysInMonth = new Date(dailyIter.getFullYear(), dailyIter.getMonth() + 1, 0).getDate();
+                const amount = Math.floor(monthlyTotal * (days / totalDaysInMonth));
+
+                dailyTotal += amount;
+                dailyRowsHtml += `
+                    <tr>
+                        <th style="font-weight: 500;">
+                            ${startOfPartial.getMonth() + 1}월 일일계산<br>
+                            <span style="font-size: 0.7rem; opacity: 0.6; font-weight: 400;">(${startOfPartial.getDate()}일~${endOfPartial.getDate()}일)</span>
+                        </th>
+                        <td class="col-amount">${formatCurrency(amount)}</td>
+                        <td class="col-status">${getStatusIconHtml(0, amount)}</td>
+                    </tr>`;
+
+                explanationHtml += `<p>${startOfPartial.getMonth() + 1}월 거주: ${startOfPartial.getDate()}일 ~ ${endOfPartial.getDate()}일 (${days}일 / 해당월 총 ${totalDaysInMonth}일)</p>`;
+                explanationHtml += `<p>계산: ${formatCurrency(monthlyTotal)} * ${days}/${totalDaysInMonth} = ${formatCurrency(amount)}</p>`;
+
+                dailyIter = new Date(endOfPartial);
+                dailyIter.setDate(dailyIter.getDate() + 1);
+            }
+
+            settlementState.dailyAmount = dailyTotal;
+
+            // 3. Process other existing bills in DB (extra fees, etc.)
+            bills.forEach(b => {
+                if (!['monthly_rent', 'maintenance_fee', 'deposit', 'cleaning_fee'].includes(b.type)) {
+                    const paid = b.payments.reduce((sum, p) => sum + p.matched_amount, 0);
+                    settlementState.unpaidOthers += (b.total_amount - paid);
+                }
+            });
+
+            if (!cleaningBill) {
+                settlementState.cleaningUnpaid = (tenant.cleaning_fee || 100000);
+            } else {
+                const cPaid = cleaningBill.payments.reduce((sum, p) => sum + p.matched_amount, 0);
+                settlementState.cleaningUnpaid = cleaningBill.total_amount - cPaid;
+            }
+
+            container.innerHTML = `
+                <h2 class="section-title">청구 내역</h2>
+                <table class="settlement-table">
+                    <thead>
+                        <tr>
+                            <th>항목</th>
+                            <th class="col-amount">금액</th>
+                            <th class="col-status">납부</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><th>보증금</th><td class="col-amount">${formatCurrency(tenant.deposit || 0)}</td><td class="col-status">${getStatusIconHtml(depositPaid, tenant.deposit || 0)}</td></tr>
+                        ${monthlyRowsHtml}
+                        ${dailyRowsHtml}
+                        <tr><th>청소비</th><td class="col-amount">${formatCurrency(tenant.cleaning_fee || 100000)}</td><td class="col-status">${getStatusIconHtml(cleaningPaid, tenant.cleaning_fee || 100000)}</td></tr>
+                        ${showCommission ? `<tr><th>수수료</th><td><input type="number" id="input-commission" class="settlement-input" placeholder="금액 입력"></td><td class="col-status">${getStatusIconHtml(0, 1)}</td></tr>` : '<tr><th>수수료</th><td class="col-amount" style="opacity:0.5;">해당 없음</td><td class="col-status">-</td></tr>'}
+                        <tr><th>전기</th><td><input type="number" id="input-electricity" class="settlement-input" placeholder="금액 입력"></td><td class="col-status">${getStatusIconHtml(0, 1)}</td></tr>
+                        <tr><th>가스</th><td><input type="number" id="input-gas" class="settlement-input" placeholder="금액 입력"></td><td class="col-status">${getStatusIconHtml(0, 1)}</td></tr>
+                    </tbody>
+                </table>
+                
+                <div class="settlement-explanation">
+                    <p><strong>* 일일계산 설명:</strong></p>
+                    ${explanationHtml}
+                    ${showCommission ? `<p style="margin-top:0.5rem;"><strong>* 수수료 안내:</strong> 계약 종료일(${tenant.contract_end_date})로부터 2주 이상 일찍 퇴실하여 부동산 수수료가 부과됩니다.</p>` : ''}
+                </div>
+            `;
+
+            // Re-attach listeners for real-time updates
+            ['input-commission', 'input-electricity', 'input-gas'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('input', updateSettlementSummary);
+                }
+            });
+
+            updateSettlementSummary();
+        }
+
+        async function renderTenantHistory(bills) {
+            const container = document.getElementById('payment-history-container');
+
+            if (!bills || bills.length === 0) {
+                container.innerHTML = '<div class="empty-state">납부 내역이 없습니다.</div>';
+                return;
+            }
+
+            // Sort bills: Maintenance Fee -> Cleaning Fee -> Monthly Rent -> Deposit (bottom)
+            const typeOrder = {
+                'maintenance_fee': 1,
+                'cleaning_fee': 2,
+                'monthly_rent': 3,
+                'deposit': 4,
+                'extra_fee': 5
+            };
+
+            const sortedBills = [...bills].sort((a, b) => {
+                // First sort by month (descending)
+                const monthCompare = b.bill_month.localeCompare(a.bill_month);
+                if (monthCompare !== 0) return monthCompare;
+
+                // Then sort by type order
+                return (typeOrder[a.type] || 99) - (typeOrder[b.type] || 99);
+            });
+
+            container.innerHTML = `
+                <h2 class="section-title">납부 내역</h2>
+                <table class="settlement-table">
+                    <thead>
+                        <tr>
+                            <th>항목</th>
+                            <th class="col-amount">청구/납부</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sortedBills.map(b => {
+                const paidAmount = b.payments.reduce((sum, p) => sum + p.matched_amount, 0);
+                const typeLabel = {
+                    'deposit': '보증금',
+                    'monthly_rent': '월세',
+                    'maintenance_fee': '관리비',
+                    'cleaning_fee': '청소비',
+                    'extra_fee': '기타'
+                }[b.type] || b.type;
+
+                return `
+                                <tr>
+                                    <th style="font-weight: 500;">
+                                        ${b.bill_month} ${typeLabel}<br>
+                                        <span style="font-size: 0.7rem; opacity: 0.4; font-weight: 400;">
+                                            ${b.building_name} ${b.room_number ? b.room_number + '호' : ''}
+                                        </span>
+                                    </th>
+                                    <td class="col-amount">
+                                        ${formatCurrency(b.total_amount)}
+                                        <span style="font-size: 0.7rem; opacity: 0.6; margin-left: 0.3rem;">
+                                            (납부: ${formatCurrency(paidAmount)})
+                                        </span>
+                                    </td>
+                                </tr>
+                            `;
+            }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        async function loadTenantHistory(tenantId) {
+            // Deprecated, using renderTenantHistory instead within handleTenantChange
+            if (!tenantId) return;
+            try {
+                const res = await fetch(`/api/tenant/${tenantId}/billing`);
+                const bills = await res.json();
+                renderTenantHistory(bills);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+        async function downloadScreenshot() {
+            const container = document.querySelector('.form-container');
+            if (!container) return;
+
+            const btn = document.querySelector('.page-header button');
+            const originalText = btn.textContent;
+            btn.textContent = '캡쳐 중...';
+            btn.disabled = true;
+
+            try {
+                const canvas = await html2canvas(container, {
+                    backgroundColor: '#0f172a', // Dark blue background matching the theme
+                    scale: 2, // 2x scale for better clarity
+                    useCORS: true,
+                    logging: false,
+                    windowWidth: container.scrollWidth,
+                    windowHeight: container.scrollHeight
+                });
+
+                const link = document.createElement('a');
+                const tenantSelect = document.getElementById('tenant-select');
+                const selectedText = tenantSelect.selectedOptions[0]?.text || '퇴실내역';
+                const dateHeader = document.getElementById('selected-date').textContent || '';
+
+                // Clean filename
+                const safeName = selectedText.split('(')[0].trim();
+                const safeDate = dateHeader.replace(/[년월일\s]/g, '_').replace(/__+/g, '_').slice(0, -1);
+
+                link.download = `퇴실관리_${safeName}_${safeDate || new Date().toISOString().slice(0, 10)}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } catch (err) {
+                console.error('Screenshot failed:', err);
+                alert('이미지 저장에 실패했습니다.');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+
+</html>

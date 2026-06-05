@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>방 있어요 - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        #layout-main {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 0 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+        }
+
+        .back-link {
+            color: #f8fafc;
+            text-decoration: none;
+            font-size: 1.5rem;
+            margin-right: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .back-link:hover {
+            transform: translateX(-3px);
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .container {
+            padding: 0;
+            margin: 0;
+            width: 100%;
+        }
+
+        .mgmt-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        .mgmt-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.02);
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .mgmt-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .mgmt-summary {
+            display: flex;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            gap: 0.6rem;
+            min-height: 5rem;
+        }
+
+        .mgmt-left {
+            width: 4.5rem;
+            padding: 0.4rem 0.2rem;
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            border-radius: 0.4rem;
+            text-align: center;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            min-height: 3.2rem;
+            justify-content: center;
+        }
+
+        .mgmt-left .b-name {
+            font-size: 0.65rem;
+            opacity: 0.7;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .mgmt-left .r-num {
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        .mgmt-center {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        .center-top {
+            font-size: 1rem;
+            color: #f8fafc;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .center-bottom {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .mgmt-right {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+            align-items: center;
+        }
+
+        .status-badge {
+            height: 2rem;
+            padding: 0 0.8rem;
+            border-radius: 0.4rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 3.5rem;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .status-advertising {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .status-completed {
+            background: rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+        }
+
+        .status-drawing {
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #0f172a;
+            display: none;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        .modal-content-full {
+            background: transparent;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            border-radius: 0;
+            border: none;
+            overflow-y: auto;
+            box-sizing: border-box;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header-custom {
+            display: flex;
+            align-items: center;
+            padding: 0 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+            flex-shrink: 0;
+        }
+
+        .modal-header-custom h3 {
+            margin: 0;
+            color: #f8fafc;
+            font-size: 1.1rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .back-btn-custom {
+            color: #f8fafc;
+            text-decoration: none;
+            font-size: 1.5rem;
+            margin-right: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .photo-gallery {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            white-space: nowrap;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) transparent;
+        }
+
+        .photo-gallery::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .photo-gallery::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 3px;
+        }
+
+        .photo-gallery img {
+            height: 250px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .detail-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.5rem;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .detail-row .label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .detail-row .value {
+            color: #f8fafc;
+            font-weight: 500;
+        }
+
+        .detail-memo-box {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            color: #e2e8f0;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            min-height: 4rem;
+        }
+
+        .action-btn {
+            height: 3rem;
+            padding: 0 1.5rem;
+            border-radius: 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(99, 102, 241, 0.3);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: rgba(99, 102, 241, 0.45);
+            border-color: rgba(99, 102, 241, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.2);
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        /* Additional styles for request modal if needed */
+        #request-modal .modal-content {
+            background: #1e293b;
+            border-radius: 1.5rem;
+            padding: 2rem;
+            max-width: 450px;
+        }
+    </style>
+</head>
+
+<body>
+    <main id="layout-main">
+        <div class="header">
+            <a href="/index.html" class="back-link">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m15 18-6-6 6-6" />
+                </svg>
+            </a>
+            <h1>방 있어요</h1>
+        </div>
+
+        <div class="container">
+            <div id="room-list" class="mgmt-list">
+                <div style="text-align:center; opacity:0.5; padding:3rem;">로딩 중...</div>
+            </div>
+        </div>
+    </main>
+
+    <footer id="layout-footer">
+        <div class="footer-container" style="flex-wrap: wrap;">
+            <div class="footer-biz-name" onclick="toggleFooterInfo()">상호명: 김지선, 김세미 부동산</div>
+            <div class="footer-links">
+                <a href="/terms.html" class="footer-btn" style="text-decoration: none;">이용약관</a>
+                <a href="/privacy.html" class="footer-btn" style="text-decoration: none;">개인정보처리방침</a>
+            </div>
+            <div id="footer-biz-details" class="footer-info-details">
+                상호명: 김지선, 김세미 부동산<br>
+                대표자명: 김지선외 1명<br>
+                사업자등록번호: 640-31-00762<br>
+                주소: 경기도 수원시 팔달구 우만동 89-5 GS지에스타워 403호
+            </div>
+        </div>
+    </footer>
+
+    <!-- Detail Room Modal -->
+    <div id="room-detail-modal" class="modal-overlay" onclick="if(event.target === this) closeDetailModal()">
+        <div class="modal-content-full">
+            <div class="modal-header-custom">
+                <a href="javascript:void(0)" class="back-btn-custom" onclick="closeDetailModal()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m15 18-6-6 6-6" />
+                    </svg>
+                </a>
+                <h3 id="detail-building-room">방 상세정보</h3>
+            </div>
+
+            <div style="padding: 1.5rem;">
+                <div id="detail-photos" class="photo-gallery"></div>
+
+                <div class="detail-info">
+                    <div class="detail-row">
+                        <span class="label">보증금</span>
+                        <span class="value" id="detail-deposit" style="color:#4ade80;"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">월세</span>
+                        <span class="value" id="detail-rent" style="color:#4ade80;"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">관리비</span>
+                        <span class="value" id="detail-mgmt" style="color:#4ade80;"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">청소비</span>
+                        <span class="value" id="detail-cleaning"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">입실 가능일</span>
+                        <span class="value" id="detail-date"></span>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 1.5rem;">
+                    <label>상세 설명</label>
+                    <div id="detail-memo" class="detail-memo-box"></div>
+                </div>
+
+                <div style="display: flex; gap: 0.8rem; margin-top: 1.5rem;">
+                    <button class="action-btn" onclick="goToAskPage()" style="margin-top: 0;">문의하기</button>
+                    <button class="action-btn" onclick="closeDetailModal()"
+                        style="margin-top: 0; background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2);">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', fetchRooms);
+
+        let currentAdId = null;
+
+        async function fetchRooms() {
+            try {
+                const res = await fetch('/api/postings?type=room&status=advertising');
+                const rooms = await res.json();
+                renderRooms(rooms);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function formatVal(v) {
+            if (!v) return '0';
+            const val = v / 10000;
+            return val.toLocaleString(undefined, { maximumFractionDigits: 1 });
+        }
+
+        function renderRooms(rooms) {
+            const list = document.getElementById('room-list');
+            list.innerHTML = '';
+
+            if (rooms.length === 0) {
+                list.innerHTML = '<div style="text-align:center; opacity:0.5; padding:3rem;">등록된 방이 없습니다.</div>';
+                return;
+            }
+
+            rooms.forEach(room => {
+                const item = document.createElement('div');
+                item.className = 'mgmt-item';
+
+                const deposit = formatVal(room.deposit);
+                const rent = formatVal(room.rent);
+                const mgmt = formatVal(room.management_fee);
+                const available = room.available_date || '-';
+
+                const statusMap = {
+                    'advertising': { label: '광고중', class: 'status-advertising' },
+                    'completed': { label: '완료', class: 'status-completed' },
+                    'drawing': { label: '추첨중', class: 'status-drawing' }
+                };
+                const statusInfo = statusMap[room.status] || { label: room.status || '대기', class: '' };
+
+                item.innerHTML = `
+                <div class="mgmt-summary" onclick="openDetailModal(${room.id})">
+                    <div class="mgmt-left">
+                        <div class="b-name">${room.building || '미지정'}</div>
+                        <div class="r-num">${room.room_number}</div>
+                    </div>
+                    <div class="mgmt-center">
+                        <div class="center-top">${room.title || '제목 없음'}</div>
+                        <div class="center-bottom">${deposit} / ${rent} / ${mgmt}<br>입실 가능: ${available}</div>
+                    </div>
+                    <div class="mgmt-right">
+                        <span class="status-badge ${statusInfo.class}">${statusInfo.label}</span>
+                    </div>
+                </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        async function openDetailModal(id) {
+            try {
+                currentAdId = id;
+                const res = await fetch(`/api/postings/${id}`);
+                const room = await res.json();
+
+                document.getElementById('detail-building-room').textContent = `${room.building_name || ''} ${room.room_number}호`;
+
+                const formatFull = (v) => v ? v.toLocaleString() + '원' : '0원';
+
+                document.getElementById('detail-deposit').textContent = formatFull(room.deposit);
+                document.getElementById('detail-rent').textContent = formatFull(room.rent);
+                document.getElementById('detail-mgmt').textContent = formatFull(room.management_fee);
+                document.getElementById('detail-cleaning').textContent = room.cleaning_fee ? formatFull(room.cleaning_fee) : '없음';
+                document.getElementById('detail-date').textContent = room.available_date || '상시 가능';
+                document.getElementById('detail-memo').textContent = room.description || '내용 없음';
+
+                const gallery = document.getElementById('detail-photos');
+                gallery.innerHTML = '';
+                if (room.images && room.images.length > 0) {
+                    room.images.forEach(img => {
+                        const imgEl = document.createElement('img');
+                        imgEl.src = img.image_url;
+                        gallery.appendChild(imgEl);
+                    });
+                } else {
+                    gallery.innerHTML = '<div style="padding:1rem; opacity:0.3;">등록된 사진이 없습니다.</div>';
+                }
+
+                document.getElementById('room-detail-modal').style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            } catch (err) {
+                console.error(err);
+                alert('방 정보를 불러오지 못했습니다.');
+            }
+        }
+
+        function closeDetailModal() {
+            document.getElementById('room-detail-modal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            currentAdId = null;
+        }
+
+        function goToAskPage() {
+            if (!currentAdId) return;
+            window.location.href = `/room_ask.html?ad_id=${currentAdId}`;
+        }
+    </script>
+</body>
+
+</html>

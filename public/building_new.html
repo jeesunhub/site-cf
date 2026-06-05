@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>건물 추가/수정 - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 70px;
+            /* Below navigation bar */
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.25rem;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .form-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .dynamic-field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .room-row {
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .room-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 1rem;
+            margin-top: 3rem;
+            padding-bottom: 4rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 1rem;
+            border-radius: 0.8rem;
+            border: none;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .btn-submit {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .add-small-btn {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: auto;
+            height: auto;
+        }
+
+        .add-small-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+        }
+
+        .delete-small-btn {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .delete-small-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .form-group {
+            margin-top: 0;
+        }
+
+        .underlined-input {
+            background: transparent !important;
+            border: none !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 0 !important;
+            padding: 0.4rem 0 !important;
+        }
+
+        .underlined-input:focus {
+            border-bottom-color: var(--primary) !important;
+            background: transparent !important;
+            outline: none;
+        }
+    </style>
+</head>
+
+<body class="has-back-button">
+    <div class="page-header">
+        <h1 id="page-title">건물 추가</h1>
+    </div>
+
+    <div class="form-container">
+        <section style="margin-bottom: 3rem;">
+
+            <div class="form-group">
+                <label>건물 이름</label>
+                <input type="text" id="building-name" class="form-input" placeholder="건물 이름을 입력하세요">
+            </div>
+
+            <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <label style="margin: 0;">주소</label>
+                    <button id="btn-add-address" class="add-small-btn" onclick="addAddressField()">추가</button>
+                </div>
+                <div id="address-fields" class="dynamic-field-group">
+                    <!-- Address fields populated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div style="margin-bottom: 1rem;">
+                <label style="margin: 0;">방 구성 (동 / 층 / 호)</label>
+            </div>
+            <div id="room-fields" class="dynamic-field-group">
+                <!-- Room fields added by JS -->
+            </div>
+        </section>
+
+        <div class="action-btns">
+            <button class="btn btn-cancel" onclick="history.back()">취소</button>
+            <button class="btn btn-submit" id="btn-save-building" onclick="saveBuilding()">저장</button>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+        const urlParams = new URLSearchParams(window.location.search);
+        let buildingId = urlParams.get('id');
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!user) {
+                window.location.href = '/index.html';
+                return;
+            }
+            renderNavbar();
+
+            if (buildingId) {
+                document.getElementById('page-title').innerText = '건물 수정';
+                await loadBuildingData();
+            } else {
+                // Initialize for new building
+                renderAddressFields(['']);
+                addRoomRow(null, '', '1', '01', '');
+            }
+        });
+
+        async function loadBuildingData() {
+            try {
+                const res = await fetch(`/api/landlord/${user.id}/buildings`);
+                const buildings = await res.json();
+                const building = buildings.find(b => b.id == buildingId);
+                if (!building) throw new Error('Building not found');
+
+                document.getElementById('building-name').value = building.name;
+
+                // Load addresses
+                const addrRes = await fetch(`/api/buildings/${buildingId}/addresses`);
+                const addresses = addrRes.ok ? await addrRes.json() : [];
+                const addrValues = addresses.map(a => a.address);
+                renderAddressFields(addrValues.length > 0 ? addrValues : ['']);
+
+                // Load rooms
+                const roomRes = await fetch(`/api/buildings/${buildingId}/rooms-with-events`);
+                const rooms = roomRes.ok ? await roomRes.json() : [];
+                const roomContainer = document.getElementById('room-fields');
+                roomContainer.innerHTML = '';
+                if (rooms.length > 0) {
+                    rooms.forEach(r => {
+                        addRoomRow(r.id, r.building || '', (r.floor !== null && r.floor !== undefined) ? r.floor : '', r.unit || '', r.room_number);
+                    });
+                } else {
+                    addRoomRow(null, '', '1', '01', '');
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert('데이터를 불러오는데 실패했습니다.');
+            }
+        }
+
+        function renderAddressFields(addresses = []) {
+            const container = document.getElementById('address-fields');
+            container.innerHTML = '';
+            const btnAdd = document.getElementById('btn-add-address');
+
+            if (addresses.length < 2) {
+                btnAdd.style.display = 'block';
+            } else {
+                btnAdd.style.display = 'none';
+            }
+
+            if (addresses.length === 0) addresses.push('');
+
+            addresses.forEach((addr, index) => {
+                const div = document.createElement('div');
+                div.style.display = 'flex';
+                div.style.gap = '0.5rem';
+                div.style.alignItems = 'center';
+
+                let xBtn = '';
+                if (addresses.length === 2 && index === 1) {
+                    xBtn = `<button class="delete-small-btn" onclick="removeAddressField(${index})">삭제</button>`;
+                }
+
+                div.innerHTML = `
+                    <input type="text" class="form-input address-input" value="${addr}" placeholder="주소를 입력하세요" style="flex:1;">
+                    ${xBtn}
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function addAddressField() {
+            const current = Array.from(document.querySelectorAll('.address-input')).map(i => i.value);
+            if (current.length >= 2) return;
+            current.push('');
+            renderAddressFields(current);
+        }
+
+        function removeAddressField(index) {
+            const current = Array.from(document.querySelectorAll('.address-input')).map(i => i.value);
+            current.splice(index, 1);
+            renderAddressFields(current);
+        }
+
+        function addRoomRow(id = null, dong = '', floor = '', unit = '', roomNum = '', afterElement = null) {
+            const container = document.getElementById('room-fields');
+            const div = document.createElement('div');
+            div.className = 'room-row';
+            if (id) div.dataset.id = id;
+
+            div.innerHTML = `
+                <input type="text" class="form-input input-dong underlined-input" placeholder="동" value="${dong}" oninput="updateRoomPreview(this)" style="width: 38px; text-align:center; font-size: 0.9rem;">
+                <input type="text" class="form-input input-floor underlined-input" placeholder="층" value="${floor}" oninput="updateRoomPreview(this)" style="width: 38px; text-align:center; font-size: 0.9rem;">
+                <input type="text" class="form-input input-unit underlined-input" placeholder="호수" value="${unit}" oninput="updateRoomPreview(this)" style="width: 38px; text-align:center; font-size: 0.9rem;">
+                <span style="color:var(--primary); font-weight:bold; padding:0 0.1rem;">:</span>
+                <input type="text" class="form-input input-preview underlined-input" value="${roomNum}" readonly style="width: 38px; text-align:center; color:var(--accent); font-weight:600; font-size: 0.9rem; border-bottom-color: rgba(99, 102, 241, 0.4) !important;">
+                <div style="display:flex; gap:0.4rem; margin-left:auto; flex-shrink: 0;">
+                    <button class="add-small-btn" onclick="duplicateRoomRow(this)">추가</button>
+                    <button class="delete-small-btn" onclick="deleteRoomRow(this)">삭제</button>
+                </div>
+            `;
+
+            if (afterElement) {
+                afterElement.insertAdjacentElement('afterend', div);
+            } else {
+                container.appendChild(div);
+            }
+
+            if (!roomNum) {
+                updateRoomPreview(div.querySelector('.input-unit'));
+            }
+            updateRoomDeleteButtons();
+        }
+
+        function deleteRoomRow(btn) {
+            btn.closest('.room-row').remove();
+            updateRoomDeleteButtons();
+        }
+
+        function duplicateRoomRow(btn) {
+            const row = btn.closest('.room-row');
+            const dong = row.querySelector('.input-dong').value;
+            const floor = row.querySelector('.input-floor').value;
+            const unitStr = row.querySelector('.input-unit').value;
+
+            let nextUnit = unitStr;
+            const match = unitStr.match(/(\d+)$/);
+            if (match) {
+                const numPart = match[1];
+                const incremented = (parseInt(numPart, 10) + 1).toString();
+                const padded = incremented.padStart(numPart.length, '0');
+                nextUnit = unitStr.substring(0, match.index) + padded;
+            }
+
+            addRoomRow(null, dong, floor, nextUnit, '', row);
+        }
+
+        function updateRoomPreview(el) {
+            const row = el.closest('.room-row');
+            const dong = row.querySelector('.input-dong').value.trim();
+            const floor = row.querySelector('.input-floor').value.trim();
+            const unit = row.querySelector('.input-unit').value.trim();
+            const preview = row.querySelector('.input-preview');
+            preview.value = `${dong}${floor}${unit}`;
+        }
+
+        function updateRoomDeleteButtons() {
+            const rows = document.querySelectorAll('.room-row');
+            rows.forEach(row => {
+                const deleteBtn = row.querySelector('.delete-small-btn');
+                deleteBtn.style.display = rows.length <= 1 ? 'none' : 'block';
+            });
+        }
+
+        async function saveBuilding() {
+            const saveBtn = document.getElementById('btn-save-building');
+            const name = document.getElementById('building-name').value.trim();
+            if (!name) { alert('건물 이름을 입력하세요.'); return; }
+
+            const addresses = Array.from(document.querySelectorAll('.address-input'))
+                .map(input => input.value.trim()).filter(val => val !== '');
+
+            const roomRows = Array.from(document.querySelectorAll('.room-row'));
+            const roomDataList = roomRows.map(row => {
+                const id = row.dataset.id || null;
+                const dong = row.querySelector('.input-dong').value.trim();
+                const floor = row.querySelector('.input-floor').value.trim();
+                const unit = row.querySelector('.input-unit').value.trim();
+                const room_number = row.querySelector('.input-preview').value.trim();
+                return { id, building: dong, floor, unit, room_number };
+            }).filter(d => d.room_number !== '');
+
+            try {
+                saveBtn.innerText = '저장 중...';
+                saveBtn.disabled = true;
+
+                let targetId = buildingId;
+                if (targetId) {
+                    // Update Building
+                    await fetch(`/api/buildings/${targetId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, address1: addresses[0] || '', address2: addresses[1] || '', memo: '' })
+                    });
+
+                    // Process Rooms
+                    for (const rd of roomDataList) {
+                        if (rd.id) {
+                            await fetch(`/api/rooms/${rd.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ room_number: rd.room_number, building: rd.building, floor: rd.floor, unit: rd.unit, memo: '' })
+                            });
+                        } else {
+                            await fetch('/api/rooms', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ building_id: targetId, room_number: rd.room_number, building: rd.building, floor: rd.floor, unit: rd.unit, memo: '' })
+                            });
+                        }
+                    }
+                } else {
+                    // Create Building
+                    const res = await fetch('/api/buildings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ landlord_id: user.id, name, address1: addresses[0] || '', address2: addresses[1] || '', memo: '' })
+                    });
+                    const data = await res.json();
+                    targetId = data.buildingId;
+
+                    for (const rd of roomDataList) {
+                        await fetch('/api/rooms', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ building_id: targetId, room_number: rd.room_number, building: rd.building, floor: rd.floor, unit: rd.unit, memo: '' })
+                        });
+                    }
+                }
+
+                alert('저장되었습니다.');
+                window.location.href = '/buildings.html';
+            } catch (err) {
+                console.error(err);
+                alert('저장 실패: ' + err.message);
+            } finally {
+                saveBtn.innerText = '저장';
+                saveBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+
+</html>

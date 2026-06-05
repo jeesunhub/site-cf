@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>방 상세정보 - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .detail-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem 1.5rem;
+            background: #1e293b;
+            min-height: calc(100vh - 3.5rem);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.6rem;
+            color: white;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .form-input:disabled {
+            background: transparent;
+            border-color: transparent;
+            padding: 0.2rem 0;
+            cursor: default;
+        }
+
+        .photo-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        .photo-item {
+            aspect-ratio: 16/10;
+            border-radius: 0.6rem;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.05);
+            position: relative;
+            cursor: pointer;
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .value-display {
+            font-size: 1.1rem;
+            color: white;
+            font-weight: 500;
+        }
+
+        .price-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.8rem;
+            margin-top: 2rem;
+        }
+
+        #image-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            cursor: zoom-out;
+        }
+
+        #image-overlay img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+
+<body class="has-back-button">
+    <!-- Navigation will be injected by renderNavbar() -->
+
+    <div class="detail-container">
+        <!-- Edit Mode Section -->
+        <div id="edit-section" style="display:none;">
+            <div class="price-grid">
+                <div class="form-group">
+                    <label>건물명</label>
+                    <select id="modal-building" class="form-input" onchange="fetchRooms(this.value)"></select>
+                </div>
+                <div class="form-group">
+                    <label>호수 (방번호)</label>
+                    <select id="modal-room" class="form-input"></select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>광고 제목</label>
+                <input type="text" id="modal-title" class="form-input">
+            </div>
+
+            <div class="price-grid">
+                <div class="form-group">
+                    <label>보증금</label>
+                    <input type="number" id="modal-deposit" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>월세</label>
+                    <input type="number" id="modal-rent" class="form-input">
+                </div>
+            </div>
+
+            <div class="price-grid">
+                <div class="form-group">
+                    <label>관리비</label>
+                    <input type="number" id="modal-mgmt" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>청소비</label>
+                    <input type="number" id="modal-cleaning" class="form-input">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>입실 가능일</label>
+                <input type="date" id="modal-date" class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label>상세 설명 (메모)</label>
+                <textarea id="modal-memo" class="form-input" rows="5"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>사진 (최대 5장)</label>
+                <button class="btn" style="background:var(--primary); margin-bottom:0.8rem;"
+                    onclick="document.getElementById('photo-input').click()">사진 추가</button>
+                <input type="file" id="photo-input" multiple accept="image/*" style="display:none"
+                    onchange="handleFileSelect(this)">
+                <div id="photo-preview" class="photo-list"></div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn" style="background:rgba(255,255,255,0.05); color:#94a3b8; flex:1;"
+                    onclick="history.back()">취소</button>
+                <button class="btn btn-add" style="flex:2;" onclick="saveAd()">저장하기</button>
+            </div>
+        </div>
+
+        <!-- View Mode Section -->
+        <div id="view-section" style="display:none;">
+            <div class="form-group">
+                <label>건물 / 호수</label>
+                <div class="value-display"><span id="view-building" style="color:var(--primary);"></span> <span
+                        id="view-room"></span></div>
+            </div>
+
+            <div class="form-group">
+                <label>광고 제목</label>
+                <div id="view-title" class="value-display" style="font-size:1.2rem; font-weight:600;"></div>
+            </div>
+
+            <div class="price-grid">
+                <div class="form-group">
+                    <label>보증금</label>
+                    <div id="view-deposit" class="value-display" style="color:#4ade80;"></div>
+                </div>
+                <div class="form-group">
+                    <label>월세</label>
+                    <div id="view-rent" class="value-display" style="color:#4ade80;"></div>
+                </div>
+            </div>
+
+            <div class="price-grid">
+                <div class="form-group">
+                    <label>관리비</label>
+                    <div id="view-mgmt" class="value-display"></div>
+                </div>
+                <div class="form-group">
+                    <label>청소비</label>
+                    <div id="view-cleaning" class="value-display"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>입실 가능일</label>
+                <div id="view-date" class="value-display"></div>
+            </div>
+
+            <div class="form-group">
+                <label>상세 설명</label>
+                <div id="view-memo"
+                    style="white-space:pre-wrap; color:#cbd5e1; line-height:1.6; background:rgba(255,255,255,0.02); padding:1rem; border-radius:0.6rem;">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>사진</label>
+                <div id="view-photos" class="photo-list"></div>
+            </div>
+
+            <div id="applicant-section" style="display:none; margin-top:2rem;">
+                <hr style="border:none; border-top:1px solid rgba(255,255,255,0.1); margin:2rem 0;">
+                <button class="btn" style="width:100%; background:var(--primary);" onclick="openRequestModal()">입주
+                    신청하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Modal -->
+    <div id="request-modal" class="modal-overlay" style="display: none;"
+        onclick="if(event.target === this) closeRequestModal()">
+        <div class="modal-content"
+            style="max-width: 450px; background: #1e293b; padding: 2rem; border-radius: 1.5rem; margin: auto;">
+            <h3 style="margin-top: 0;">입주 신청</h3>
+            <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem;">임대인에게 입주 희망 메시지를 보냅니다.</p>
+
+            <div class="form-group">
+                <label>이름</label>
+                <input type="text" id="req-name" class="form-input" placeholder="성함을 입력하세요">
+            </div>
+            <div class="form-group">
+                <label>연락처</label>
+                <input type="text" id="req-phone" class="form-input" placeholder="010-0000-0000">
+            </div>
+            <div class="form-group">
+                <label>생년월일</label>
+                <input type="date" id="req-birth" class="form-input">
+            </div>
+            <div class="form-group">
+                <label>메세지</label>
+                <textarea id="req-memo" class="form-input" rows="3" placeholder="추가 문의사항이나 희망 방문 시간을 입력하세요"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 0.8rem; margin-top: 1rem;">
+                <button class="btn" style="background: rgba(255,255,255,0.05); color: #94a3b8; flex: 1;"
+                    onclick="closeRequestModal()">취소</button>
+                <button class="btn btn-add" style="flex: 2;" onclick="submitRequest()">신청 완료</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Overlay -->
+    <div id="image-overlay" onclick="this.style.display='none'">
+        <img id="overlay-img" src="">
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+        const adId = new URLSearchParams(window.location.search).get('id');
+        let currentAd = null;
+        let selectedFiles = [];
+        let cachedBuildings = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            renderNavbar();
+            if (!adId) {
+                alert('잘못된 접근입니다.');
+                history.back();
+                return;
+            }
+            await loadAdDetail();
+        });
+
+        async function loadAdDetail() {
+            try {
+                const res = await fetch(`/api/postings/${adId}`);
+                if (!res.ok) throw new Error('광고를 찾을 수 없습니다.');
+                currentAd = await res.json();
+
+                // If user is author or admin, show edit mode
+                const isAuthor = user && currentAd.created_by === user.id;
+                const isAdmin = user && user.role === 'admin';
+
+                if (isAuthor || isAdmin) {
+                    await fetchBuildings();
+                    showEditMode();
+                } else {
+                    showViewMode();
+                }
+            } catch (err) {
+                console.error(err);
+                alert(err.message);
+                history.back();
+            }
+        }
+
+        async function showEditMode() {
+            document.getElementById('edit-section').style.display = 'block';
+
+            document.getElementById('modal-building').value = currentAd.room_building_id || '';
+            await fetchRooms(currentAd.room_building_id, currentAd.related_id);
+
+            document.getElementById('modal-title').value = currentAd.title || '';
+            document.getElementById('modal-deposit').value = currentAd.deposit || 0;
+            document.getElementById('modal-rent').value = currentAd.rent || 0;
+            document.getElementById('modal-mgmt').value = currentAd.management_fee || 0;
+            document.getElementById('modal-cleaning').value = currentAd.cleaning_fee || 0;
+            document.getElementById('modal-date').value = currentAd.available_date || '';
+            document.getElementById('modal-memo').value = currentAd.description || '';
+
+            renderPhotos(currentAd.images, true);
+        }
+
+        function showViewMode() {
+            document.getElementById('view-section').style.display = 'block';
+
+            document.getElementById('view-building').textContent = `[${currentAd.building_name || ''}]`;
+            document.getElementById('view-room').textContent = (currentAd.room_number || '') + '호';
+            document.getElementById('view-title').textContent = currentAd.title || '제목 없음';
+            document.getElementById('view-deposit').textContent = (currentAd.deposit || 0).toLocaleString();
+            document.getElementById('view-rent').textContent = (currentAd.rent || 0).toLocaleString();
+            document.getElementById('view-mgmt').textContent = (currentAd.management_fee || 0).toLocaleString();
+            document.getElementById('view-cleaning').textContent = (currentAd.cleaning_fee || 0).toLocaleString();
+            document.getElementById('view-date').textContent = currentAd.available_date || '상시 가능';
+            document.getElementById('view-memo').textContent = currentAd.description || '내용 없음';
+
+            renderPhotos(currentAd.images, false);
+
+            const isAuthor = user && currentAd.created_by === user.id;
+            if (!isAuthor) {
+                document.getElementById('applicant-section').style.display = 'block';
+            }
+        }
+
+        async function fetchBuildings() {
+            let url = user.role === 'admin' ? '/api/admin/buildings' : `/api/landlord/${user.id}/buildings`;
+            try {
+                const res = await fetch(url);
+                cachedBuildings = await res.json();
+                const select = document.getElementById('modal-building');
+                select.innerHTML = '<option value="">건물 선택</option>';
+                cachedBuildings.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.id;
+                    opt.textContent = b.name;
+                    select.appendChild(opt);
+                });
+            } catch (err) { console.error(err); }
+        }
+
+        async function fetchRooms(buildingId, selectedRoomId = null) {
+            const select = document.getElementById('modal-room');
+            if (!buildingId) {
+                select.innerHTML = '<option value="">호수 선택</option>';
+                return;
+            }
+            try {
+                const res = await fetch(`/api/buildings/${buildingId}/rooms`);
+                const rooms = await res.json();
+                select.innerHTML = '<option value="">호수 선택</option>';
+                rooms.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.id;
+                    opt.textContent = r.room_number + '호';
+                    if (selectedRoomId && r.id == selectedRoomId) opt.selected = true;
+                    select.appendChild(opt);
+                });
+            } catch (err) { console.error(err); }
+        }
+
+        function openRequestModal() {
+            document.getElementById('request-modal').style.display = 'flex';
+        }
+
+        function closeRequestModal() {
+            document.getElementById('request-modal').style.display = 'none';
+        }
+
+        async function submitRequest() {
+            const name = document.getElementById('req-name').value.trim();
+            const phone = document.getElementById('req-phone').value.trim();
+            const birth = document.getElementById('req-birth').value.trim();
+            const memo = document.getElementById('req-memo').value.trim();
+
+            if (!name || !phone || !birth) {
+                alert('이름, 생년월일, 연락처를 모두 입력해주세요.');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name, phone, birth, memo,
+                        landlordId: currentAd.created_by,
+                        buildingId: currentAd.building_id
+                    })
+                });
+
+                if (res.ok) {
+                    alert(`${name}님, 신청이 접수되었습니다.\n곧 연락드리겠습니다!`);
+                    closeRequestModal();
+                } else {
+                    const data = await res.json();
+                    alert('신청 실패: ' + (data.error || '알 수 없는 오류'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('서버와 통신 중 오류가 발생했습니다.');
+            }
+        }
+
+        function renderPhotos(images, editable) {
+            const container = editable ? document.getElementById('photo-preview') : document.getElementById('view-photos');
+            container.innerHTML = '';
+
+            if (images && images.length > 0) {
+                images.forEach(img => {
+                    const div = document.createElement('div');
+                    div.className = 'photo-item';
+                    div.innerHTML = `<img src="${img.image_url}">`;
+                    if (editable) {
+                        div.innerHTML += `<div style="position:absolute; top:0; right:0; background:rgba(239, 68, 68, 0.8); color:white; width:20px; height:20px; text-align:center; line-height:20px; font-size:12px; cursor:pointer;" onclick="deleteExistingImage(${img.id}, event)">×</div>`;
+                    } else {
+                        div.onclick = () => showLargeImage(img.image_url);
+                    }
+                    container.appendChild(div);
+                });
+            } else if (!editable) {
+                container.innerHTML = '<div style="grid-column:1/-1; text-align:center; opacity:0.3; padding:2rem;">등록된 사진이 없습니다.</div>';
+            }
+        }
+
+        function showLargeImage(url) {
+            document.getElementById('overlay-img').src = url;
+            document.getElementById('image-overlay').style.display = 'flex';
+        }
+
+        function handleFileSelect(input) {
+            const files = Array.from(input.files);
+            selectedFiles = selectedFiles.concat(files);
+            renderNewPhotoPreviews();
+        }
+
+        function renderNewPhotoPreviews() {
+            const container = document.getElementById('photo-preview');
+            // Remove existing new previews
+            container.querySelectorAll('.new-photo').forEach(el => el.remove());
+
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const div = document.createElement('div');
+                    div.className = 'photo-item new-photo';
+                    div.innerHTML = `<img src="${e.target.result}">
+                                     <div style="position:absolute; top:0; right:0; background:rgba(0,0,0,0.5); color:white; width:20px; height:20px; text-align:center; line-height:20px; font-size:12px; cursor:pointer;" onclick="removeNewPhoto(${index})">×</div>`;
+                    container.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function removeNewPhoto(index) {
+            selectedFiles.splice(index, 1);
+            renderNewPhotoPreviews();
+        }
+
+        async function deleteExistingImage(imgId, event) {
+            event.stopPropagation();
+            if (!confirm('사진을 삭제하시겠습니까?')) return;
+            const res = await fetch(`/api/images/${imgId}`, { method: 'DELETE' });
+            if (res.ok) {
+                event.target.closest('.photo-item').remove();
+            }
+        }
+
+        async function saveAd() {
+            const formData = new FormData();
+            formData.append('title', document.getElementById('modal-title').value);
+            formData.append('deposit', document.getElementById('modal-deposit').value);
+            formData.append('rent', document.getElementById('modal-rent').value);
+            formData.append('management_fee', document.getElementById('modal-mgmt').value);
+            formData.append('cleaning_fee', document.getElementById('modal-cleaning').value);
+            formData.append('available_date', document.getElementById('modal-date').value);
+            formData.append('description', document.getElementById('modal-memo').value);
+            formData.append('related_id', document.getElementById('modal-room').value);
+            formData.append('type', 'room');
+
+            selectedFiles.forEach(file => {
+                formData.append('photos', file);
+            });
+
+            try {
+                const res = await fetch(`/api/postings/${adId}`, {
+                    method: 'PUT',
+                    body: formData
+                });
+
+                if (res.ok) {
+                    alert('성공적으로 수정되었습니다.');
+                    location.href = '/room_adv.html';
+                } else {
+                    const err = await res.json();
+                    alert('저장 실패: ' + err.error);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('통신 오류가 발생했습니다.');
+            }
+        }
+    </script>
+</body>
+
+</html>

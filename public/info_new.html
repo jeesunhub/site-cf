@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정보 등록 - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 70px;
+            /* Below navigation bar */
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.25rem;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            box-sizing: border-box;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.8rem;
+            color: white;
+            font-size: 1rem;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .photo-upload-group {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1rem;
+            border-radius: 1rem;
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+        }
+
+        .photo-preview-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        .photo-preview-item {
+            width: 80px;
+            height: 80px;
+            border-radius: 0.6rem;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .photo-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .remove-photo {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2.5rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 1rem;
+            border-radius: 0.8rem;
+            border: none;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .btn-submit {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+
+<body class="has-back-button">
+    <!-- Navbar will be rendered by renderNavbar() -->
+
+    <div class="page-header">
+        <h1>정보 등록</h1>
+    </div>
+
+    <div class="container" style="padding-top: 2rem;">
+        <div class="form-group">
+            <label>정보 분류</label>
+            <select id="info-category" class="form-input">
+                <option value="">분류를 선택하세요</option>
+            </select>
+        </div>
+
+
+
+        <div class="form-group">
+            <label>정보 제목</label>
+            <input type="text" id="info-title" class="form-input" placeholder="예: [맛집] 우리동네 가성비 고기집">
+        </div>
+
+        <div class="form-group">
+            <label>상세 내용</label>
+            <textarea id="info-desc" class="form-input" rows="8" placeholder="공유하고 싶은 상세 내용을 입력해주세요."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>공개 대상</label>
+            <select id="info-target" class="form-input">
+                <option value="">전체공개 (모두에게 보임)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>익명 옵션</label>
+            <div
+                style="display:flex; align-items:center; gap:0.5rem; background:rgba(255,255,255,0.03); padding:0.8rem; border-radius:0.8rem;">
+                <input type="checkbox" id="info-anon" style="width:1.2rem; height:1.2rem; cursor:pointer;">
+                <label for="info-anon" style="margin:0; cursor:pointer; color:#ccc;">익명으로 작성하기</label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>사진 첨부 (최대 5장)</label>
+            <div class="photo-upload-group">
+                <button class="btn btn-cancel" style="padding:0.6rem 1rem; font-size:0.9rem; margin-bottom:0.5rem;"
+                    onclick="document.getElementById('photo-input').click()">사진 추가</button>
+                <input type="file" id="photo-input" multiple accept="image/*" style="display:none"
+                    onchange="handleFileSelect(this)">
+                <div id="photo-preview" class="photo-preview-list"></div>
+            </div>
+        </div>
+
+        <div class="action-btns">
+            <button class="btn btn-cancel" onclick="history.back()">취소</button>
+            <button class="btn btn-submit" onclick="submitInfo()">등록하기</button>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user) location.href = '/index.html';
+
+        let selectedFiles = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderNavbar();
+            initForm();
+            updateUnreadCount();
+        });
+
+        async function initForm() {
+            const catSelect = document.getElementById('info-category');
+            catSelect.innerHTML = `
+                <option value="">분류를 선택하세요</option>
+                ${user.role === 'admin' ? '<option value="친절한 부동산">친절한 부동산</option>' : ''}
+                <option value="직접 가본 맛집">직접 가본 맛집</option>
+                <option value="추천할 장소">추천할 장소</option>
+                <option value="공유 할 할인 정보">공유 할 할인 정보</option>
+                <option value="기타 정보">기타 정보</option>
+            `;
+
+            try {
+                let url = user.role === 'admin' ? '/api/admin/buildings' : `/api/landlord/${user.id}/buildings`;
+                if (user.role === 'tenant') url = `/api/tenant/${user.id}/buildings`;
+
+                const res = await fetch(url);
+                const buildings = await res.json();
+
+                const tSelect = document.getElementById('info-target');
+
+                tSelect.innerHTML = '<option value="">전체공개 (모두에게 보임)</option>';
+                buildings.forEach(b => tSelect.innerHTML += `<option value="${b.id}">${b.name} 내 전용</option>`);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function handleFileSelect(input) {
+            const files = Array.from(input.files);
+            if (selectedFiles.length + files.length > 5) {
+                alert('사진은 최대 5장까지 등록 가능합니다.');
+                return;
+            }
+            selectedFiles = [...selectedFiles, ...files];
+            renderPreviews();
+        }
+
+        function renderPreviews() {
+            const list = document.getElementById('photo-preview');
+            list.innerHTML = '';
+            selectedFiles.forEach((file, idx) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const item = document.createElement('div');
+                    item.className = 'photo-preview-item';
+                    item.innerHTML = `
+                        <img src="${e.target.result}">
+                        <div class="remove-photo" onclick="removePhoto(${idx})">×</div>
+                    `;
+                    list.appendChild(item);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function removePhoto(idx) {
+            selectedFiles.splice(idx, 1);
+            renderPreviews();
+        }
+
+        async function submitInfo() {
+            const category = document.getElementById('info-category').value;
+            const bId = ''; // Building selection removed
+            const title = document.getElementById('info-title').value.trim();
+            const desc = document.getElementById('info-desc').value.trim();
+            const tId = document.getElementById('info-target').value;
+            const isAnon = document.getElementById('info-anon').checked;
+
+            if (!category) return alert('분류를 선택해주세요.');
+            if (!title || !desc) return alert('제목과 내용을 입력해주세요.');
+
+            const formData = new FormData();
+            formData.append('type', 'info');
+            formData.append('category', category);
+            formData.append('title', title);
+            formData.append('description', desc);
+            formData.append('building_id', bId);
+            formData.append('target_id', tId);
+            formData.append('is_anonymous', isAnon);
+            formData.append('created_by', user.id);
+
+            selectedFiles.forEach(file => formData.append('photos', file));
+
+            try {
+                const res = await fetch('/api/postings', { method: 'POST', body: formData });
+                if (res.ok) {
+                    alert('등록되었습니다.');
+                    location.href = '/info_adv.html';
+                } else {
+                    alert('등록 실패');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('통신 오류 발생');
+            }
+        }
+    </script>
+</body>
+
+</html>

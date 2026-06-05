@@ -1,0 +1,272 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>임대인 상세 정보 - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body.in-iframe {
+            background: transparent;
+            padding: 0;
+        }
+
+        .form-container {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-section {
+            background: transparent;
+            border: none;
+            padding: 0;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-section h2 {
+            font-size: 1rem;
+            margin-bottom: 0.12rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--primary);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.12rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.02rem;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            font-weight: 400;
+            opacity: 1;
+        }
+
+        .form-group input,
+        .form-group select {
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.8rem;
+            border-radius: 0.8rem;
+            color: #f8fafc;
+            font-size: 1rem;
+            font-family: inherit;
+            width: 100%;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--primary);
+            outline: none;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .form-group input[readonly] {
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.5);
+            cursor: not-allowed;
+        }
+
+        .form-group select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1rem;
+            padding-right: 2.5rem;
+        }
+
+        option {
+            background-color: #1e293b;
+            color: #f8fafc;
+        }
+
+        .action-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .action-bar-right {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 70px;
+            /* Navbar height */
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .container {
+            margin-top: 0 !important;
+            padding-top: 0.5rem;
+        }
+    </style>
+</head>
+
+<body id="page-body" class="has-back-button">
+    <!-- Navbar will be rendered by JS -->
+    <div class="header" id="sticky-header">
+        <h1 id="page-title">임대인 상세 정보</h1>
+    </div>
+
+    <div class="container" id="main-content">
+        <div class="form-container">
+            <input type="hidden" id="user_id">
+
+            <div class="form-section">
+                <h2>👤 기본 정보</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>아이디</label>
+                        <input type="text" id="login_id" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>이름</label>
+                        <input type="text" id="nickname" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>생년월일</label>
+                        <input type="text" id="birth_date" placeholder="YYYY-MM-DD" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>전화번호</label>
+                        <input type="tel" id="phone_number" placeholder="010-0000-0000" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>상태</label>
+                        <select id="status">
+                            <option value="신청">신청</option>
+                            <option value="승인">승인</option>
+                            <option value="종료">종료</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-bar">
+                <div></div>
+                <div class="action-bar-right">
+                    <button class="btn" onclick="updateUser()">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            renderNavbar(); // Ensure navbar is rendered
+            loadUser();
+        });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('id');
+
+        async function loadUser() {
+            if (!userId) {
+                alert('잘못된 접근입니다.');
+                location.href = '/landlord_management.html';
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/users/${userId}`);
+                if (!res.ok) throw new Error('Failed to load user');
+                const user = await res.json();
+
+                document.getElementById('user_id').value = user.id;
+                document.getElementById('login_id').value = user.login_id;
+                document.getElementById('nickname').value = user.nickname;
+                document.getElementById('birth_date').value = user.birth_date;
+                document.getElementById('phone_number').value = formatPhone(user.phone_number);
+                document.getElementById('status').value = user.status;
+
+            } catch (err) {
+                console.error(err);
+                alert('정보를 불러오는데 실패했습니다.');
+                location.href = '/landlord_management.html';
+            }
+        }
+
+        async function updateUser() {
+            const id = document.getElementById('user_id').value;
+            const nickname = document.getElementById('nickname').value;
+            const birth_date = document.getElementById('birth_date').value;
+            const phone_number = document.getElementById('phone_number').value.replace(/[^0-9]/g, '');
+            const login_id = document.getElementById('login_id').value;
+            const status = document.getElementById('status').value;
+
+            if (!nickname || !birth_date) {
+                alert('필수 입력 항목을 확인해주세요.');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/users/quick', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: id,
+                        login_id: login_id,
+                        nickname: nickname,
+                        birth_date: birth_date,
+                        phone_number: phone_number,
+                        status: status
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    alert('저장되었습니다.');
+                    location.reload();
+                } else {
+                    alert('오류: ' + data.error);
+                }
+            } catch (err) {
+                alert('오류가 발생했습니다.');
+            }
+        }
+
+        document.getElementById('phone_number').addEventListener('input', (e) => {
+            e.target.value = formatPhone(e.target.value);
+        });
+    </script>
+</body>
+
+</html>

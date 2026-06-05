@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body {
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            flex-shrink: 0;
+        }
+
+        .sticky-calendar-container {
+            flex-shrink: 0;
+            background: var(--bg);
+            width: 100%;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            height: 420px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            user-select: none;
+        }
+
+        .calendar-inner-full {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+        }
+
+        .calendar-card {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .calendar-grid {
+            flex-grow: 1;
+            background: rgba(255, 255, 255, 0.01);
+            border: none;
+            border-radius: 0;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-template-rows: auto repeat(6, 1fr);
+        }
+
+        .calendar-card .card-header {
+            padding: 0.5rem 1.5rem;
+            /* Reduced padding */
+            margin-bottom: 0;
+        }
+
+        .calendar-card .card-header h2 {
+            display: none;
+            /* iPhone-style: usually just shows the month */
+        }
+
+        .calendar-day-header {
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 0 !important;
+            font-size: 0.6rem !important;
+            margin: 0 !important;
+            opacity: 0.4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: auto;
+            line-height: 1;
+        }
+
+        .calendar-day {
+            min-height: auto !important;
+            height: 100%;
+            position: relative;
+            padding: 0 !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .calendar-day:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .day-number {
+            position: absolute;
+            top: 2px;
+            left: 4px;
+            font-size: 0.65rem !important;
+            margin: 0 !important;
+            opacity: 0.4;
+        }
+
+        .calendar-day.sunday .day-number,
+        .calendar-day.holiday .day-number {
+            color: #ff4444 !important;
+            opacity: 0.8;
+        }
+
+        .calendar-day-header.sunday {
+            color: #ff4444 !important;
+            opacity: 0.8;
+        }
+
+        .calendar-day.today {
+            outline: 1px solid rgba(255, 255, 255, 0.4);
+            outline-offset: -1px;
+            background: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .day-events {
+            padding: 16px 2px 2px 2px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            height: 100%;
+            overflow: hidden;
+            align-content: flex-start;
+        }
+
+        .calendar-icon {
+            font-size: 0.8rem;
+            line-height: 1;
+            cursor: pointer;
+            user-select: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 12px;
+            height: 12px;
+        }
+
+        .other-month {
+            background: rgba(0, 0, 0, 0.2) !important;
+            opacity: 0.15;
+        }
+
+        .container {
+            padding: 0;
+            margin: 0;
+            width: 100%;
+        }
+
+        #layout-main {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden !important;
+            flex: 1;
+            min-height: 0;
+            height: 100%;
+            /* Force height */
+        }
+
+        #main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: none !important;
+            min-height: 0;
+        }
+
+        .list-container {
+            flex: 1;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .list-section-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            padding: 1rem 1.2rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.05rem;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: 0;
+        }
+
+        .item-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            background: var(--bg);
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .toggle-container {
+            display: flex;
+            background: rgba(15, 23, 42, 0.95);
+            padding: 0.8rem 1.2rem;
+            gap: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0.5rem 0;
+            position: relative;
+            transition: color 0.2s;
+        }
+
+        .toggle-btn.active {
+            color: var(--primary);
+        }
+
+        .toggle-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -0.8rem;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .list-scroll-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .item-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            background: var(--bg);
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .item-row {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.02);
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .item-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .item-summary {
+            display: flex;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            gap: 1.2rem;
+            min-height: 5rem;
+        }
+
+        /* Room Badge Style from tenants.html */
+        .room-badge {
+            width: 4.5rem;
+            padding: 0.4rem 0.2rem;
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            border-radius: 0.4rem;
+            text-align: center;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            min-height: 3.2rem;
+        }
+
+        .room-badge .b-name {
+            font-size: 0.65rem;
+            opacity: 0.7;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 400;
+        }
+
+        .room-badge .r-num {
+            font-size: 0.9rem;
+            font-weight: 700;
+            width: 100%;
+        }
+
+        .item-content-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        .item-title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 2px;
+        }
+
+        .item-title {
+            font-size: 1rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #f1f5f9;
+        }
+
+        .item-status {
+            font-size: 0.65rem;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .item-status.unpaid {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        .item-status.paid {
+            background: rgba(34, 197, 94, 0.2);
+            color: #a7f3d0;
+        }
+
+        .item-meta {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .item-amount {
+            font-weight: 600;
+            font-size: 1rem;
+            flex-shrink: 0;
+            text-align: right;
+            margin-left: auto;
+            color: #f1f5f9;
+        }
+
+        .amount-detail {
+            font-size: 0.7rem;
+            opacity: 0.5;
+            font-weight: 400;
+        }
+
+        .empty-state {
+            opacity: 0.4;
+            padding: 3rem 1rem;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        /* Day Detail Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: #1e293b;
+            padding: 1.5rem;
+            border-radius: 1.5rem;
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .close-modal {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+        }
+
+        .close-modal:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: rotate(90deg);
+        }
+
+        .event-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .event-detail-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid var(--primary);
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .event-detail-title {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 0.25rem;
+            color: #f1f5f9;
+        }
+
+        .event-detail-meta {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar will be rendered by JS -->
+
+    <!-- Separate Sticky Calendar Section -->
+    <div id="sticky-calendar-anchor"></div>
+
+    <div class="container" id="main-content">
+        <!-- Dashboard content (sidebar/stats) will be rendered here -->
+    </div>
+
+    <!-- Context Menu for Payment Date Adjustment -->
+    <div id="context-menu" class="context-menu">
+    </div>
+
+    <!-- Day Detail Modal -->
+    <div id="day-detail-modal" class="modal-overlay" onclick="if(event.target === this) closeDayModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-date-title">2026년 2월 14일</h3>
+                <button class="close-modal" onclick="closeDayModal()">×</button>
+            </div>
+            <div id="modal-event-list" class="event-list">
+                <!-- Events will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+        let currentView = 'landlord'; // 'landlord' or 'tenant'
+        let currentMonth = new Date();
+        let selectedBillId = null;
+        let calendarData = [];
+        let billingData = [];
+        let holidayCache = {}; // { year: { "YYYY-MM-DD": name } }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!user) {
+                window.location.href = '/index.html';
+                return;
+            }
+            renderNavbar();
+            init();
+        });
+
+        async function init() {
+            if (user.role === 'landlord' || user.role === 'admin') {
+                await loadLandlordView();
+            } else {
+                await loadTenantView(user.id);
+            }
+        }
+
+        async function loadLandlordView() {
+            currentView = 'landlord';
+            const isAdmin = user.role === 'admin';
+
+            // 1. Fetch Tenants
+            const tenantsUrl = isAdmin ? '/api/admin/tenants' : `/api/landlord/${user.id}/tenants`;
+            const res = await fetch(tenantsUrl);
+            const tenants = await res.json();
+
+            // 2. Fetch Calendar Data
+            const calUrl = isAdmin ? '/api/admin/calendar-data' : `/api/landlord/${user.id}/calendar-data`;
+            const calRes = await fetch(calUrl);
+            calendarData = await calRes.json();
+
+            // 3. Process Billing Data (Unpaid & Transactions)
+            const allBills = [];
+            for (const t of tenants) {
+                try {
+                    const billRes = await fetch(`/api/tenant/${t.id || t.user_id}/billing`);
+                    if (!billRes.ok) continue;
+                    const bills = await billRes.json();
+                    bills.forEach(bill => {
+                        bill.tenant_nickname = t.nickname || t.login_id;
+                        bill.tenant_color = t.color;
+                        bill.tenant_id = t.id || t.user_id;
+                        // Fallback to tenant data if bill doesn't have it
+                        bill.building_name = bill.building_name || t.building || '-';
+                        bill.room_number = bill.room_number || t.room_number || '-';
+                        allBills.push(bill);
+                    });
+                } catch (e) {
+                    console.error(`Failed to fetch billing for tenant ${t.id || t.user_id}:`, e);
+                }
+            }
+            billingData = sortBillingData(allBills);
+
+            renderDashboardUI();
+        }
+
+        function sortBillingData(data) {
+            return data.sort((a, b) => {
+                // 1. Check for deposit - always at the absolute bottom
+                if (a.type === 'deposit' && b.type !== 'deposit') return 1;
+                if (a.type !== 'deposit' && b.type === 'deposit') return -1;
+
+                // 2. Both are same category (both deposit or both non-deposit)
+                // Sort by bill_month DESC (latest first at the top)
+                const monthA = a.bill_month || '0000-00';
+                const monthB = b.bill_month || '0000-00';
+                if (monthA !== monthB) {
+                    return monthB.localeCompare(monthA);
+                }
+
+                // 3. Fallback to ID or matched_amount if months are identical (optional)
+                return (b.id || 0) - (a.id || 0);
+            });
+        }
+
+        async function loadTenantView(tenantId) {
+            currentView = 'tenant';
+
+            const billRes = await fetch(`/api/tenant/${tenantId}/billing`);
+            billingData = sortBillingData(await billRes.json());
+
+            const calRes = await fetch(`/api/tenant/${tenantId}/calendar-data`);
+            calendarData = await calRes.json();
+
+            renderDashboardUI();
+        }
+
+        function renderDashboardUI() {
+            const anchor = document.getElementById('sticky-calendar-anchor');
+            const container = document.getElementById('main-content');
+
+            // Render Sticky Calendar outside container
+            anchor.innerHTML = `
+                <div class="sticky-calendar-container" id="calendar-scroll-area">
+                    <div class="calendar-inner-full">
+                        <div class="calendar-card">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                <div class="calendar-nav">
+                                    <button onclick="changeMonth(-1)">‹</button>
+                                    <span id="current-month-label"></span>
+                                    <button onclick="changeMonth(1)">›</button>
+                                </div>
+                                <button class="btn-glass" onclick="goToToday()">오늘</button>
+                            </div>
+                            <div class="calendar-grid" id="calendar-grid"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add Scroll Interface for Calendar (iPhone-style)
+            const scrollArea = document.getElementById('calendar-scroll-area');
+            let isTransitioning = false;
+            scrollArea.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                if (isTransitioning) return;
+
+                if (Math.abs(e.deltaY) > 20) {
+                    isTransitioning = true;
+                    const delta = e.deltaY > 0 ? 1 : -1;
+                    changeMonth(delta);
+                    setTimeout(() => { isTransitioning = false; }, 300); // 300ms debounce
+                }
+            }, { passive: false });
+
+            // Add Swipe/Touch support if needed by user in future
+
+            // Render Unified List area below calendar
+            container.innerHTML = `
+                <div class="list-container" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                    <div class="toggle-container">
+                        <button id="btn-unpaid" class="toggle-btn active" onclick="switchListView('unpaid')">미납 현황</button>
+                        <button id="btn-recent" class="toggle-btn" onclick="switchListView('recent')">최근 거래 내역</button>
+                    </div>
+                    <div id="list-scroll-area" class="list-scroll-area">
+                        <ul id="unpaid-list" class="item-list"></ul>
+                        <ul id="recent-transactions" class="item-list" style="display: none;"></ul>
+                    </div>
+                </div>
+            `;
+
+            renderCalendar();
+            renderStats();
+            renderRecentTransactions();
+        }
+
+        function switchListView(view) {
+            const unpaidBtn = document.getElementById('btn-unpaid');
+            const recentBtn = document.getElementById('btn-recent');
+            const unpaidList = document.getElementById('unpaid-list');
+            const recentList = document.getElementById('recent-transactions');
+
+            if (view === 'unpaid') {
+                unpaidBtn.classList.add('active');
+                recentBtn.classList.remove('active');
+                unpaidList.style.display = 'block';
+                recentList.style.display = 'none';
+            } else {
+                recentBtn.classList.add('active');
+                unpaidBtn.classList.remove('active');
+                recentList.style.display = 'block';
+                unpaidList.style.display = 'none';
+            }
+        }
+
+        async function fetchHolidays(year) {
+            if (holidayCache[year]) return holidayCache[year];
+            try {
+                const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/KR`);
+                if (!res.ok) throw new Error('Holiday API failure');
+                const data = await res.json();
+                const yearHolidays = {};
+                data.forEach(h => {
+                    yearHolidays[h.date] = h.localName;
+                });
+                holidayCache[year] = yearHolidays;
+                return yearHolidays;
+            } catch (err) {
+                console.warn('Holidays could not be fetched:', err);
+                return {};
+            }
+        }
+
+        function goToToday() {
+            currentMonth = new Date();
+            renderCalendar();
+        }
+
+        async function changeMonth(delta) {
+            currentMonth.setMonth(currentMonth.getMonth() + delta);
+            await renderCalendar();
+        }
+
+        async function renderCalendar() {
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth();
+            const holidays = await fetchHolidays(year);
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+
+            document.getElementById('current-month-label').textContent = `${year}년 ${month + 1}월`;
+
+            const grid = document.getElementById('calendar-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach((dayName, idx) => {
+                const header = document.createElement('div');
+                header.className = 'calendar-day-header';
+                if (idx === 0) header.classList.add('sunday');
+                header.textContent = dayName;
+                grid.appendChild(header);
+            });
+
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - firstDay.getDay());
+            const currentDate = new Date(startDate);
+
+            // Calculate weeks needed
+            const totalDays = 42;
+            const weeks = 6;
+
+            // Generate all days first
+            const days = [];
+            for (let i = 0; i < totalDays; i++) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day';
+                if (currentDate.getMonth() !== month) day.classList.add('other-month');
+                const dateStr = formatLocalDate(currentDate);
+                if (currentDate.getDay() === 0 || holidays[dateStr]) day.classList.add('holiday');
+                if (currentDate.toDateString() === new Date().toDateString()) day.classList.add('today');
+
+                const dateForClick = dateStr;
+                day.onclick = () => showDayDetail(dateForClick);
+
+                day.innerHTML = `<div class="day-number">${currentDate.getDate()}</div><div class="day-events"></div>`;
+                const eventsContainer = day.querySelector('.day-events');
+
+                if (Array.isArray(calendarData)) {
+                    // Track which icons we've added to this day to avoid identical duplicates from multi-invoice rows
+                    const addedKeys = new Set();
+
+                    calendarData.forEach(data => {
+                        const userColor = data.tenant_color || '#6366f1';
+
+                        const createIcon = (char, title) => {
+                            const key = `${char}-${data.contract_id}-${userColor}`;
+                            if (addedKeys.has(key)) return;
+                            addedKeys.add(key);
+
+                            const span = document.createElement('span');
+                            span.className = 'calendar-icon';
+                            span.style.color = userColor;
+                            span.textContent = char;
+                            span.title = title;
+                            eventsContainer.appendChild(span);
+                        };
+
+                        // 1. Contract Start (▶)
+                        if (data.contract_start_date === dateStr) {
+                            createIcon('▶', '계약 시작');
+                        }
+
+                        // 2. Contract End (◀)
+                        if (data.contract_end_date === dateStr) {
+                            createIcon('◀', '계약 종료');
+                        }
+
+                        // 3. Invoice & Payment Logic
+                        const isDue = data.due_date === dateStr;
+                        const paidDates = data.paid_dates ? data.paid_dates.split(',') : [];
+                        const isPaidToday = paidDates.includes(dateStr);
+
+                        if (isDue && isPaidToday) {
+                            createIcon('◎', '청구 및 납부');
+                        } else {
+                            if (isDue) createIcon('○', '임대료 청구');
+                            if (isPaidToday) createIcon('●', '납부 완료');
+                        }
+                    });
+                }
+                days.push(day);
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            // Check if last week (row 6) is entirely other month
+            // The days array index 35 is the start of the 6th week (0-indexed 35..41)
+            const sixthWeekStart = days[35];
+            const showSixthWeek = !sixthWeekStart.classList.contains('other-month');
+
+            // Check if 5th week (row 5) is also entirely other month
+            // The days array index 28 is the start of the 5th week (0-indexed 28..34)
+            const fifthWeekStart = days[28];
+            const showFifthWeek = !fifthWeekStart.classList.contains('other-month');
+
+            // Append days to grid
+            days.forEach((day, i) => {
+                if (i >= 28 && !showFifthWeek) return; // Skip 5th & 6th weeks
+                if (i >= 35 && !showSixthWeek) return; // Skip 6th week
+                grid.appendChild(day);
+            });
+
+            // Adjust grid rows
+            if (!showFifthWeek) {
+                // 4 Weeks
+                grid.style.gridTemplateRows = 'auto repeat(4, 1fr)';
+                document.querySelector('.sticky-calendar-container').style.height = '300px';
+            } else if (!showSixthWeek) {
+                // 5 Weeks
+                grid.style.gridTemplateRows = 'auto repeat(5, 1fr)';
+                document.querySelector('.sticky-calendar-container').style.height = '360px';
+            } else {
+                // 6 Weeks
+                grid.style.gridTemplateRows = 'auto repeat(6, 1fr)';
+                document.querySelector('.sticky-calendar-container').style.height = '420px';
+            }
+        }
+
+        function renderStats() {
+            const unpaidBills = billingData.filter(b => {
+                const paid = b.payments.reduce((sum, p) => sum + p.matched_amount, 0);
+                return paid < b.total_amount;
+            });
+
+            const list = document.getElementById('unpaid-list');
+            if (!list) return;
+
+            if (unpaidBills.length === 0) {
+                list.innerHTML = `<div class="empty-state">미납 내역이 없습니다.</div>`;
+                return;
+            }
+
+            list.innerHTML = unpaidBills.map(b => {
+                const paid = b.payments.reduce((sum, p) => sum + p.matched_amount, 0);
+                const name = user.role === 'landlord' ? b.tenant_nickname : user.nickname;
+                const building = b.building_name || b.building || '-';
+                const room = b.room_number || b.room || '-';
+
+                const paidMan = Math.floor(paid / 10000);
+                const totalMan = Math.floor(b.total_amount / 10000);
+
+                const metaText = b.type === 'deposit' ? '보증금' : `${b.bill_month}분`;
+
+                return `
+                    <li class="item-row">
+                        <div class="item-summary">
+                            <div class="room-badge">
+                                <div class="b-name">${building}</div>
+                                <div class="r-num">${room}</div>
+                            </div>
+                            <div class="item-content-group">
+                                <div class="item-title-row">
+                                    <span class="item-title">${name}</span>
+                                    <span class="item-status unpaid">미납</span>
+                                </div>
+                                <div class="item-meta">
+                                    <span>${metaText}</span>
+                                </div>
+                            </div>
+                            <div class="item-amount">
+                                ${paidMan} / ${totalMan}
+                                <div class="amount-detail">단위: 만원</div>
+                            </div>
+                        </div>
+                    </li>
+                `;
+            }).join('');
+        }
+
+        function renderRecentTransactions() {
+            const list = document.getElementById('recent-transactions');
+            if (!list) return;
+
+            const recentBills = billingData.slice(0, 10);
+            if (recentBills.length === 0) {
+                list.innerHTML = `<div class="empty-state">내역이 없습니다.</div>`;
+                return;
+            }
+
+            list.innerHTML = recentBills.map(b => {
+                const paid = b.payments.reduce((sum, p) => sum + p.matched_amount, 0);
+                const status = paid >= b.total_amount ? 'paid' : 'unpaid';
+                const statusLabel = status === 'paid' ? '완납' : '미납';
+                const name = user.role === 'landlord' ? b.tenant_nickname : user.nickname;
+                const building = b.building_name || b.building || '-';
+                const room = b.room_number || b.room || '-';
+
+                const paidMan = Math.floor(paid / 10000);
+                const totalMan = Math.floor(b.total_amount / 10000);
+
+                const metaText = b.type === 'deposit' ? '보증금' : `${b.bill_month}분`;
+
+                return `
+                    <li class="item-row">
+                        <div class="item-summary">
+                            <div class="room-badge">
+                                <div class="b-name">${building}</div>
+                                <div class="r-num">${room}</div>
+                            </div>
+                            <div class="item-content-group">
+                                <div class="item-title-row">
+                                    <span class="item-title">${name}</span>
+                                    <span class="item-status ${status}">${statusLabel}</span>
+                                </div>
+                                <div class="item-meta">
+                                    <span>${metaText}</span>
+                                </div>
+                            </div>
+                            <div class="item-amount">
+                                ${paidMan} / ${totalMan}
+                                <div class="amount-detail">단위: 만원</div>
+                            </div>
+                        </div>
+                    </li>
+                `;
+            }).join('');
+        }
+
+        // Context Menu Logic
+        function showContextMenu(e, billId) {
+            e.preventDefault();
+            selectedBillId = billId;
+            const menu = document.getElementById('context-menu');
+            menu.style.display = 'block';
+            menu.style.left = `${e.pageX}px`;
+            menu.style.top = `${e.pageY}px`;
+
+            document.addEventListener('click', () => {
+                menu.style.display = 'none';
+            }, { once: true });
+        }
+
+        async function adjustDate(type) {
+            if (!selectedBillId) return;
+            alert(`${type} 조정 기능은 백엔드 연결 후 제공됩니다.`);
+            await init();
+        }
+
+        function showDayDetail(dateStr) {
+            const modal = document.getElementById('day-detail-modal');
+            const title = document.getElementById('modal-date-title');
+            const list = document.getElementById('modal-event-list');
+
+            const dateObj = new Date(dateStr);
+            title.textContent = `${dateObj.getFullYear()}년 ${dateObj.getMonth() + 1}월 ${dateObj.getDate()}일`;
+            list.innerHTML = '';
+
+            const dayEvents = [];
+            if (Array.isArray(calendarData)) {
+                const addedKeys = new Set();
+
+                calendarData.forEach(data => {
+                    const roomInfo = `${data.building_name || ''} ${data.room_number ? data.room_number + '호' : ''}`.trim();
+                    const tenantName = data.tenant_nickname || '정보 없음';
+
+                    if (data.contract_start_date === dateStr) {
+                        const key = `start-${data.contract_id}`;
+                        if (!addedKeys.has(key)) {
+                            addedKeys.add(key);
+                            dayEvents.push({ icon: '▶', title: '계약 시작', meta: `임차인: ${tenantName}<br>건물: ${roomInfo}`, color: data.tenant_color });
+                        }
+                    }
+
+                    if (data.contract_end_date === dateStr) {
+                        const key = `end-${data.contract_id}`;
+                        if (!addedKeys.has(key)) {
+                            addedKeys.add(key);
+                            dayEvents.push({ icon: '◀', title: '계약 종료', meta: `임차인: ${tenantName}<br>건물: ${roomInfo}`, color: data.tenant_color });
+                        }
+                    }
+
+                    const isDue = data.due_date === dateStr;
+                    const paidDates = data.paid_dates ? data.paid_dates.split(',') : [];
+                    const isPaidToday = paidDates.includes(dateStr);
+
+                    if (isDue && isPaidToday) {
+                        dayEvents.push({ icon: '◎', title: '청구 및 납부', meta: `임차인: ${tenantName}<br>건물: ${roomInfo}<br>청구액: ${formatCurrency(data.total_amount)}원`, color: data.tenant_color });
+                    } else {
+                        if (isDue) {
+                            dayEvents.push({ icon: '○', title: '임대료 청구', meta: `임차인: ${tenantName}<br>건물: ${roomInfo}<br>청구액: ${formatCurrency(data.total_amount)}원`, color: data.tenant_color });
+                        }
+                        if (isPaidToday) {
+                            dayEvents.push({ icon: '●', title: '납부 완료', meta: `임차인: ${tenantName}<br>건물: ${roomInfo}`, color: data.tenant_color });
+                        }
+                    }
+                });
+            }
+
+            if (dayEvents.length === 0) {
+                list.innerHTML = '<div class="empty-state" style="padding: 1rem 0;">일정이 없습니다.</div>';
+            } else {
+                dayEvents.forEach(ev => {
+                    const div = document.createElement('div');
+                    div.className = 'event-detail-item';
+                    if (ev.color) div.style.borderLeftColor = ev.color;
+                    div.innerHTML = `
+                        <div class="event-detail-title"><span style="color:${ev.color}">${ev.icon}</span> ${ev.title}</div>
+                        <div class="event-detail-meta" style="color: rgba(255, 255, 255, 0.7);">${ev.meta}</div>
+                    `;
+                    list.appendChild(div);
+                });
+            }
+
+            // Add "Check-out Today" button at the bottom of the list
+            const checkoutBtn = document.createElement('button');
+            checkoutBtn.className = 'btn-glass';
+            checkoutBtn.style.width = '100%';
+            checkoutBtn.style.marginTop = '1rem';
+            checkoutBtn.textContent = '오늘 퇴실 관리';
+            checkoutBtn.onclick = () => {
+                window.location.href = `/checkout_management.html?date=${dateStr}`;
+            };
+            list.appendChild(checkoutBtn);
+
+            modal.style.display = 'flex';
+        }
+
+        function closeDayModal() {
+            document.getElementById('day-detail-modal').style.display = 'none';
+        }
+    </script>
+</body>
+
+</html>

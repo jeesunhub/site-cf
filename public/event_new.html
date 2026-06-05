@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이벤트 추가 - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.25rem;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .form-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 0.5rem;
+            margin-left: 0.5rem;
+        }
+
+        .form-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 1rem 1.2rem;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        select.form-input {
+            appearance: none;
+            cursor: pointer;
+        }
+
+        textarea.form-input {
+            resize: none;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 1.2rem;
+            border-radius: 1rem;
+            border: none;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 1rem;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            transition: transform 0.2s;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+    </style>
+</head>
+
+<body class="has-back-button">
+    <div class="page-header">
+        <h1 id="event-input-title">이벤트 추가</h1>
+    </div>
+
+    <div class="form-container">
+        <div class="form-group">
+            <label>건물 선택</label>
+            <select id="building-select" class="form-input" onchange="handleBuildingChange()">
+                <option value="">적용 건물 선택</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>호수 선택</label>
+            <select id="room-select" class="form-input" disabled>
+                <option value="">건물을 먼저 선택하세요</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>날짜</label>
+            <input type="date" id="event-date" class="form-input">
+        </div>
+
+        <div class="form-group">
+            <label>내용</label>
+            <textarea id="event-memo" class="form-input" rows="5" placeholder="이벤트 내용을 입력해주세요"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>사진 (선택)</label>
+            <input type="file" id="event-photo" class="form-input" accept="image/*" onchange="previewImage(this)">
+            <div id="image-preview-container" style="margin-top: 1rem; display: none;">
+                <img id="image-preview" src=""
+                    style="width: 100%; border-radius: 1rem; border: 1px solid rgba(255,255,255,0.1);">
+            </div>
+        </div>
+
+        <button id="submit-btn" class="btn-submit" onclick="submitEvent()">이벤트 저장</button>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+        const eventId = new URLSearchParams(window.location.search).get('id');
+        const initialRoomId = new URLSearchParams(window.location.search).get('roomId');
+        let buildings = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!user) {
+                location.href = '/index.html';
+                return;
+            }
+            renderNavbar();
+
+            // Set default date to today
+            document.getElementById('event-date').value = new Date().toISOString().split('T')[0];
+
+            await loadBuildings();
+
+            if (eventId) {
+                await loadEventForEdit();
+            } else if (initialRoomId) {
+                await preselectRoom(initialRoomId);
+            }
+        });
+
+        async function preselectRoom(roomId) {
+            try {
+                const res = await fetch(`/api/rooms/${roomId}`);
+                if (!res.ok) return;
+                const room = await res.json();
+
+                const buildingSelect = document.getElementById('building-select');
+                buildingSelect.value = room.building_id;
+
+                await handleBuildingChange();
+                const roomSelect = document.getElementById('room-select');
+                roomSelect.value = roomId;
+            } catch (err) {
+                console.error('Error preselecting room:', err);
+            }
+        }
+
+        async function loadBuildings() {
+            try {
+                const res = await fetch(`/api/landlord/${user.id}/buildings`);
+                buildings = await res.json();
+                const select = document.getElementById('building-select');
+
+                buildings.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.id;
+                    opt.textContent = b.name;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                console.error(err);
+                alert('건물 정보를 불러오는데 실패했습니다.');
+            }
+        }
+
+        async function loadEventForEdit() {
+            try {
+                const res = await fetch(`/api/room-events/${eventId}`);
+                if (!res.ok) throw new Error('Event not found');
+                const event = await res.json();
+
+                document.getElementById('event-input-title').innerText = '이벤트 수정';
+                document.getElementById('submit-btn').innerText = '수정 완료';
+
+                // 1. Set Building
+                const buildingSelect = document.getElementById('building-select');
+                buildingSelect.value = event.building_id;
+
+                // 2. Load Rooms and Set Room
+                await handleBuildingChange();
+                const roomSelect = document.getElementById('room-select');
+                roomSelect.value = event.room_id;
+
+                // 3. Set Date and Memo
+                document.getElementById('event-date').value = event.event_date;
+                document.getElementById('event-memo').value = event.memo || '';
+
+                // 4. Set Photo Preview if exists
+                if (event.photo) {
+                    const container = document.getElementById('image-preview-container');
+                    const preview = document.getElementById('image-preview');
+                    preview.src = event.photo;
+                    container.style.display = 'block';
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert('이벤트 정보를 불러오지 못했습니다.');
+                history.back();
+            }
+        }
+
+        async function handleBuildingChange() {
+            const buildingId = document.getElementById('building-select').value;
+            const roomSelect = document.getElementById('room-select');
+
+            roomSelect.innerHTML = '<option value="">호수 선택</option>';
+
+            if (!buildingId) {
+                roomSelect.disabled = true;
+                roomSelect.innerHTML = '<option value="">건물을 먼저 선택하세요</option>';
+                return;
+            }
+
+            try {
+                roomSelect.disabled = false;
+                const res = await fetch(`/api/buildings/${buildingId}/rooms-with-events`);
+                const rooms = await res.json();
+
+                rooms.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.id;
+                    opt.textContent = r.room_number === '0' ? '건물전체' : `${r.room_number}호`;
+                    roomSelect.appendChild(opt);
+                });
+            } catch (err) {
+                console.error(err);
+                alert('호수 정보를 불러오는데 실패했습니다.');
+            }
+        }
+
+        function previewImage(input) {
+            const container = document.getElementById('image-preview-container');
+            const preview = document.getElementById('image-preview');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    preview.src = e.target.result;
+                    container.style.display = 'block';
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function submitEvent() {
+            const roomId = document.getElementById('room-select').value;
+            const eventDate = document.getElementById('event-date').value;
+            const memo = document.getElementById('event-memo').value;
+            const photoInput = document.getElementById('event-photo');
+            const submitBtn = document.getElementById('submit-btn');
+
+            if (!roomId) return alert('호수를 선택해 주세요.');
+            if (!eventDate) return alert('날짜를 선택해 주세요.');
+            if (!memo.trim()) return alert('내용을 입력해 주세요.');
+
+            try {
+                submitBtn.disabled = true;
+                const formData = new FormData();
+                formData.append('event_date', eventDate);
+                formData.append('memo', memo.trim());
+                if (photoInput.files[0]) {
+                    formData.append('photo', photoInput.files[0]);
+                }
+
+                const url = eventId
+                    ? `/api/room-events/${eventId}`
+                    : `/api/rooms/${roomId}/events`;
+
+                const method = eventId ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method: method,
+                    body: formData
+                });
+
+                if (res.ok) {
+                    alert(eventId ? '이벤트가 수정되었습니다.' : '이벤트가 성공적으로 저장되었습니다.');
+                    location.href = `buildings_room.html?id=${roomId}`;
+                } else {
+                    alert('저장에 실패했습니다.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('서버 오류가 발생했습니다.');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+
+</html>

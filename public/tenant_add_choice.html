@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Tenant - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .choice-container {
+            max-width: 800px;
+            margin: 4rem auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .choice-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 2rem;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .choice-card:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .choice-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .choice-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .choice-desc {
+            opacity: 0.6;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 600px) {
+            .choice-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="main-content">
+        <h2 style="text-align:center; margin-bottom: 1rem;">새로운 세입자 추가 방식 선택</h2>
+        <p style="text-align:center; opacity:0.6; margin-bottom:3rem;">계약을 등록할 방식을 선택해 주세요.</p>
+
+        <div class="choice-container">
+            <div class="choice-card" onclick="startAIUpload()">
+                <div class="choice-icon">📁</div>
+                <div class="choice-title">파일 업로드</div>
+                <div class="choice-desc">
+                    주택임대차계약서(사진/PDF)를 업로드하면<br>
+                    AI가 자동으로 내용을 인식하여 입력합니다.
+                </div>
+            </div>
+
+            <div class="choice-card" onclick="window.location.href='/contract_new.html'">
+                <div class="choice-icon">✍️</div>
+                <div class="choice-title">직접 입력</div>
+                <div class="choice-desc">
+                    세입자 정보와 계약 조건을<br>
+                    관리자가 직접 상세하게 입력합니다.
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align:center; margin-top: 3rem;">
+            <button class="btn btn-secondary" onclick="window.history.back()">뒤로 가기</button>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            renderNavbar([
+                { name: 'Profile Settings', url: '/settings_profile.html' },
+                { name: 'Tenants', url: '/tenants.html' },
+                { name: 'Add Tenant', url: '/tenant_add_choice.html' }
+            ]);
+        });
+
+        function startAIUpload() {
+            alert('파일 업로드 (AI 인식) 기능은 현재 준비 중입니다.\n"직접 입력" 기능을 이용해 주세요.');
+        }
+    </script>
+</body>
+
+</html>

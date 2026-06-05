@@ -1,0 +1,233 @@
+Table users {
+  id integer [primary key, increment]
+  login_id text [not null, unique]
+  password text [not null]
+  nickname text
+  color text
+  photo_path text
+  role text [not null, note: "tenant, landlord, admin"]
+  birth_date text
+  phone_number text
+  noti integer [default: 0]
+  approved integer [default: 0]
+  status text [default: "임시", note: "'임시', '승인', '종료'"]
+  title text
+  description text
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table message_box {
+  id integer [primary key, increment]
+  author_id integer
+  message_id integer [note: "points to messages.id"]
+  target text [note: "'direct', 'to_all', 'to_building', 'to_landlords'"]
+  category text [note: "'가입신청', '방있어요', '물품공유', '시스템'"]
+  related_id integer
+  related_table text
+  title text
+  confirmed integer [default: 0]
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table messages {
+  id integer [primary key, increment]
+  content text
+  is_read integer [default: 0]
+  read_at datetime
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table message_recipient {
+  id integer [primary key, increment]
+  message_id integer [not null, note: "refers to message_box.id"]
+  recipient_id integer [not null]
+  read_at datetime [note: "null if unread"]
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table buildings {
+  id integer [primary key, increment]
+  name text [not null]
+  memo text
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table building_addresses {
+  id integer [primary key, increment]
+  building_id integer [not null]
+  address text [not null]
+}
+
+Table landlord_buildings {
+  id integer [primary key, increment]
+  landlord_id integer [not null]
+  building_id integer [not null]
+}
+
+Table rooms {
+  id integer [primary key, increment]
+  building_id integer [not null]
+  room_number text [not null]
+  memo text
+  building text
+  floor integer
+  unit text
+  status integer [default: 0]
+  deposit integer
+  rent integer
+  management_fee integer
+  available_date text
+}
+
+Table items {
+  id integer [primary key, increment]
+  owner_id integer [not null]
+  title text
+  description text
+  status text [note: "'open', 'closed', 'completed'", default: "open"]
+  building_id integer
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table item_users {
+  id integer [primary key, increment]
+  item_id integer [not null]
+  user_id integer [not null]
+  start_date date
+  end_date date
+  memo text
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table room_tenant {
+  id integer [primary key, increment]
+  room_id integer [not null]
+  tenant_id integer [not null]
+  start_date date [not null]
+  end_date date
+}
+
+Table contracts {
+  id integer [primary key, increment]
+  room_id integer [not null]
+  tenant_id integer [not null]
+  payment_type text [not null, note: "prepaid, postpaid"]
+  contract_start_date date [not null]
+  contract_end_date date
+  move_out_date date
+  deposit integer [not null]
+  monthly_rent integer [not null]
+  maintenance_fee integer [not null]
+  cleaning_fee integer [default: 0]
+  extra_fee integer [default: 0]
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table contract_keywords {
+  id integer [primary key, increment]
+  contract_id integer [not null]
+  keyword text [note: "string array"]
+}
+
+Table invoices {
+  id integer [primary key, increment]
+  contract_id integer [not null]
+  type text [not null, note: "deposit, monthly_rent, maintenance_fee, cleaning_fee, extra_fee"]
+  billing_month text [note: "YYYY-MM"]
+  due_date date
+  amount integer [not null]
+  status text
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table payments {
+  id integer [primary key, increment]
+  contract_id integer [not null]
+  amount integer [not null]
+  paid_at datetime [not null]
+  type text [not null, note: "deposit, monthly_rent, maintenance_fee, cleaning_fee, extra_fee"]
+  raw_text text
+  memo text
+}
+
+Table payment_allocation {
+  id integer [primary key, increment]
+  payment_id integer [not null]
+  invoice_id integer [not null]
+  amount integer [not null]
+}
+
+Table room_events {
+  id integer [primary key, increment]
+  room_id integer [not null]
+  event_date date [not null]
+  memo text
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table advertisements {
+  id integer [primary key, increment]
+  related_id integer [note: "item_id or room_id"]
+  related_table text [note: "'item' or 'room'"]
+  title text
+  description text
+  price integer
+  created_by integer [note: "null if anonymous"]
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+  status text [note: "'advertising', 'drawing', 'completed'"]
+  target_id integer [note: "building_id for targeted ads"]
+  category text
+}
+
+Table applicants {
+  id integer [primary key, increment]
+  user_id integer [not null]
+  advertisement_id integer [not null]
+  status text [note: "'applying', 'won', 'lost'"]
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table images {
+  id integer [primary key, increment]
+  related_id integer
+  image_url text
+  is_main integer [default: 0]
+  related_table text
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table logs {
+  id integer [primary key, increment]
+  related_table text
+  related_id integer
+  timestamp datetime [default: `CURRENT_TIMESTAMP`]
+  memo text
+}
+
+Ref: message_box.author_id > users.id
+Ref: message_box.message_id > messages.id [delete: cascade]
+Ref: message_recipient.message_id > message_box.id [delete: cascade]
+Ref: message_recipient.recipient_id > users.id [delete: cascade]
+Ref: building_addresses.building_id > buildings.id
+Ref: landlord_buildings.landlord_id > users.id
+Ref: landlord_buildings.building_id > buildings.id
+Ref: rooms.building_id > buildings.id
+Ref: items.owner_id > users.id
+Ref: items.building_id > buildings.id
+Ref: room_tenant.room_id > rooms.id
+Ref: room_tenant.tenant_id > users.id [delete: cascade]
+Ref: contracts.room_id > rooms.id
+Ref: contracts.tenant_id > users.id
+Ref: contract_keywords.contract_id > contracts.id
+Ref: invoices.contract_id > contracts.id
+Ref: payments.contract_id > contracts.id
+Ref: payment_allocation.payment_id > payments.id
+Ref: payment_allocation.invoice_id > invoices.id
+Ref: room_events.room_id > rooms.id
+Ref: advertisements.created_by > users.id
+Ref: advertisements.target_id > buildings.id
+Ref: applicants.user_id > users.id
+Ref: applicants.advertisement_id > advertisements.id
+Ref: logs.related_id > items.id
+Ref: item_users.item_id > items.id [delete: cascade]
+Ref: item_users.user_id > users.id [delete: cascade]

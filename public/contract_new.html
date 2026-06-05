@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contract Form - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body.in-iframe {
+            background: transparent;
+            padding: 0;
+        }
+
+        .form-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .form-section {
+            background: transparent;
+            border: none;
+            padding: 0;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-section h2 {
+            font-size: 1rem;
+            margin-bottom: 0.12rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--primary);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.8rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.02rem;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            font-weight: 400;
+            opacity: 1;
+        }
+
+        .form-group input,
+        .form-group select {
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.8rem;
+            border-radius: 0.8rem;
+            color: #f8fafc;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .form-group select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1rem;
+            padding-right: 2.5rem;
+        }
+
+        option {
+            background-color: #1e293b;
+            color: #f8fafc;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--primary);
+            outline: none;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 0.4rem;
+            margin-top: 2rem;
+            padding-bottom: 2rem;
+        }
+
+        .btn {
+            flex: 1;
+            height: 3.2rem;
+            padding: 0 1rem;
+            border-radius: 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-submit,
+        .btn-edit {
+            background: rgba(99, 102, 241, 0.3);
+            color: white;
+            border: 1px solid rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-submit:hover,
+        .btn-edit:hover {
+            background: rgba(99, 102, 241, 0.45);
+            border-color: rgba(99, 102, 241, 0.6);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn-extend {
+            background: rgba(168, 85, 247, 0.3);
+            color: white;
+            border: 1px solid rgba(168, 85, 247, 0.4);
+        }
+
+        .btn-extend:hover {
+            background: rgba(168, 85, 247, 0.45);
+            border-color: rgba(168, 85, 247, 0.6);
+            box-shadow: 0 8px 20px rgba(168, 85, 247, 0.2);
+        }
+
+        .btn-terminate {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-terminate:hover {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: rgba(239, 68, 68, 0.5);
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-reset {
+            background: rgba(148, 163, 184, 0.2);
+            color: #cbd5e1;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+        }
+
+        .btn-reset:hover {
+            background: rgba(148, 163, 184, 0.3);
+            border-color: rgba(148, 163, 184, 0.5);
+            box-shadow: 0 8px 20px rgba(148, 163, 184, 0.2);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .field-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.2rem;
+        }
+
+        .field-label-row label {
+            margin-bottom: 0 !important;
+        }
+
+        .label-buttons {
+            display: flex;
+            gap: 0.6rem;
+        }
+
+        .btn-inline {
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0;
+            color: var(--accent);
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            opacity: 0.8;
+            line-height: 1;
+        }
+
+        .btn-inline:hover {
+            opacity: 1;
+            color: var(--primary);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 70px;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Adjust container margin since we have a header now */
+        .container {
+            margin: 0 !important;
+            padding-top: 0.5rem;
+        }
+
+        /* Debug Modal Styles */
+        .debug-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .debug-modal-content {
+            background: #1e293b;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            border-radius: 1rem;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .debug-section {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .debug-section h3 {
+            font-size: 1.1rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .debug-text-box {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .debug-field-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .debug-field-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 0.8rem;
+            border-radius: 0.5rem;
+        }
+
+        .debug-field-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 0.3rem;
+        }
+
+        .debug-field-value {
+            font-size: 0.85rem;
+            color: #f8fafc;
+        }
+
+        .close-debug-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+    </style>
+
+</head>
+
+<body id="page-body" class="has-back-button">
+    <!-- Navbar will be rendered by JS -->
+    <div class="header" id="sticky-header">
+        <h1 id="page-title">계약 등록/수정</h1>
+    </div>
+
+    <div class="container" id="main-content">
+        <div class="form-container">
+
+            <div class="form-section">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 0.12rem; padding-bottom: 0.5rem;">
+                    <h2 style="border:none; margin:0; padding:0;">👤 세입자 정보</h2>
+                    <button type="button" id="btn-delete-tenant" class="btn-inline"
+                        style="color: #ef4444; display: none;" onclick="deleteTenant()">임차인 삭제</button>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group"><label>성명</label><input type="text" id="tenant-name"
+                            placeholder="세입자 이름을 입력하세요"></div>
+                    <div class="form-group"><label>생년월일</label><input type="date" id="tenant-dob"></div>
+                    <div class="form-group"><label>연락처</label><input type="tel" id="tenant-phone"
+                            placeholder="010-0000-0000" oninput="this.value = formatPhone(this.value)"></div>
+                </div>
+            </div>
+            <div class="form-section">
+                <h2>🏢 건물 및 호수</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>건물명</label>
+                        <select id="contract-building" onchange="loadRooms(); renderVacantPostings();"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>호수 (방번호)</label>
+                        <select id="contract-room" onchange="renderVacantPostings()"></select>
+                    </div>
+                </div>
+            </div>
+            <div class="form-section">
+                <h2>📄 계약 조건</h2>
+                <div class="form-grid" style="grid-template-columns: 1fr;">
+                    <div class="form-group">
+                        <label>방 내놓기 중 선택 (공실 광고)</label>
+                        <select id="vacant-postings-select" onchange="applyPostingData(this.value)">
+                            <option value="">광고 내역에서 선택 (자동 입력)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group"><label>계약 시작일</label><input type="date" id="contract-start"></div>
+                    <div class="form-group">
+                        <div class="field-label-row"><label>계약 종료일</label>
+                            <div class="label-buttons">
+                                <button type="button" class="btn-inline" onclick="addMonths(12)">+1년</button>
+                                <button type="button" class="btn-inline" onclick="addMonths(6)">+6개월</button>
+                            </div>
+                        </div><input type="date" id="contract-end">
+                    </div>
+                    <div class="form-group"><label>납부 방식</label><select id="contract-payment-type">
+                            <option value="prepaid">선불</option>
+                            <option value="postpaid" selected>후불</option>
+                        </select></div>
+                    <div class="form-group">
+                        <div class="field-label-row"><label>보증금 (원)</label>
+                            <div class="label-buttons">
+                                <button type="button" class="btn-inline"
+                                    onclick="addAmount('contract-deposit', 10000000)">+1천만</button>
+                                <button type="button" class="btn-inline"
+                                    onclick="addAmount('contract-deposit', 1000000)">+1백만</button>
+                                <button type="button" class="btn-inline"
+                                    onclick="addAmount('contract-deposit', 100000)">+1십만</button>
+                            </div>
+                        </div>
+                        <input type="text" id="contract-deposit" value="0"
+                            oninput="this.value = formatCurrency(this.value)">
+                    </div>
+                    <div class="form-group">
+                        <div class="field-label-row"><label>월세 (원)</label>
+                            <div class="label-buttons">
+                                <button type="button" class="btn-inline"
+                                    onclick="addAmount('contract-rent', 100000)">+1십만</button>
+                                <button type="button" class="btn-inline"
+                                    onclick="addAmount('contract-rent', 50000)">+5만</button>
+                                <button type="button" class="btn-inline"
+                                    onclick="addAmount('contract-rent', 10000)">+1만</button>
+                            </div>
+                        </div>
+                        <input type="text" id="contract-rent" value="0"
+                            oninput="this.value = formatCurrency(this.value)">
+                    </div>
+                    <div class="form-group">
+                        <div class="field-label-row"><label>관리비 (원)</label>
+                            <div class="label-buttons">
+                                <button type="button" class="btn-inline"
+                                    onclick="addAmount('contract-fee', 100000)">+1십만</button>
+                                <button type="button" class="btn-inline"
+                                    onclick="addAmount('contract-fee', 50000)">+5만</button>
+                                <button type="button" class="btn-inline"
+                                    onclick="addAmount('contract-fee', 10000)">+1만</button>
+                            </div>
+                        </div>
+                        <input type="text" id="contract-fee" value="0"
+                            oninput="this.value = formatCurrency(this.value)">
+                    </div>
+                    <div class="form-group">
+                        <div class="field-label-row"><label>청소비 (원)</label>
+                            <div class="label-buttons">
+                                <button type="button" class="btn-inline"
+                                    onclick="addAmount('contract-cleaning', 100000)">+1십만</button>
+                                <button type="button" class="btn-inline"
+                                    onclick="addAmount('contract-cleaning', 50000)">+5만</button>
+                                <button type="button" class="btn-inline"
+                                    onclick="addAmount('contract-cleaning', 10000)">+1만</button>
+                            </div>
+                        </div>
+                        <input type="text" id="contract-cleaning" value="0"
+                            oninput="this.value = formatCurrency(this.value)">
+                    </div>
+                </div>
+            </div>
+            <div class="action-btns" id="action-buttons">
+                <button class="btn btn-cancel" id="cancel-btn" onclick="handleCancel()">취소</button>
+                <button class="btn btn-submit" id="submit-btn" onclick="submitContract()">저장</button>
+
+                <button class="btn btn-edit" id="edit-btn" onclick="enableEditMode()" style="display:none;">수정</button>
+                <button class="btn btn-extend" id="extend-btn" onclick="enableExtendMode()"
+                    style="display:none;">연장</button>
+                <button class="btn btn-terminate" id="terminate-btn" onclick="openTerminateModal()"
+                    style="display:none;">퇴실</button>
+                <button class="btn btn-reset" id="reset-btn" onclick="resetContractData()"
+                    style="display:none;">리셋</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terminate Modal -->
+    <div id="terminate-modal" class="modal" onclick="if(event.target === this) closeModal('terminate-modal')">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>계약 종료 설정</h2>
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label>퇴실 일자 (계약 종료일)</label>
+                <input type="date" id="termination-date" class="form-input">
+            </div>
+            <div class="modal-footer" style="margin-top: 2rem; display: flex; gap: 1rem;">
+                <button class="btn btn-secondary" onclick="closeModal('terminate-modal')" style="flex: 1;">취소</button>
+                <button class="btn" id="confirm-terminate-btn" style="flex: 1;">완료</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>const user = JSON.parse(localStorage.getItem('user'));
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentAction = urlParams.get('action');
+        const contractId = urlParams.get('contract_id');
+        const isIframe = window.self !== window.top;
+        let currentTenantId = null;
+        let vacantPostings = [];
+        let activeContractId = contractId; // ID of the contract we are editing/updating
+
+        if (!user) {
+            window.location.href = '/index.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (isIframe) {
+                document.getElementById('page-body').classList.add('in-iframe');
+                const header = document.getElementById('sticky-header');
+                if (header) header.style.display = 'none';
+                // Navbar is handled by common.js, but we can prevent it or it will just be hidden if we don't call it.
+            }
+
+            else {
+                renderNavbar();
+            }
+
+            await loadBuildings();
+            await loadVacantPostings();
+
+            // Pre-fill from URL params (e.g. from Text Extraction or Tenant Mgmt)
+            const urlBuildingName = urlParams.get('building_name');
+            const urlBuildingId = urlParams.get('building_id');
+            const urlRoomNumber = urlParams.get('room_number');
+            const urlRoomId = urlParams.get('room_id');
+
+            if (urlBuildingId) {
+                document.getElementById('contract-building').value = urlBuildingId;
+                await loadRooms(urlRoomId || urlRoomNumber);
+            } else if (urlBuildingName) {
+                const bSelect = document.getElementById('contract-building');
+                const options = bSelect.options;
+                for (let i = 0; i < options.length; i++) {
+                    if (options[i].text === urlBuildingName) {
+                        bSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+                await loadRooms(urlRoomId || urlRoomNumber);
+            } else if (urlParams.get('tenant_name') && urlParams.get('tenant_dob')) {
+                const name = urlParams.get('tenant_name');
+                const dob = urlParams.get('tenant_dob');
+
+                try {
+                    const res = await fetch('/api/users/find', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, birth_date: dob, role: 'tenant' })
+                    });
+                    const users = await res.json();
+                    if (users.length > 0 && users[0].building_id) {
+                        const user = users[0];
+                        currentTenantId = user.id;
+                        document.getElementById('btn-delete-tenant').style.display = 'block';
+
+                        document.getElementById('contract-building').value = user.building_id;
+                        await loadRooms(user.room_id || user.room_number);
+                    }
+                } catch (e) {
+                    console.error('Error auto-filling room from tenant:', e);
+                }
+            }
+            if (urlParams.get('deposit')) document.getElementById('contract-deposit').value = formatCurrency(urlParams.get('deposit'));
+            if (urlParams.get('rent')) document.getElementById('contract-rent').value = formatCurrency(urlParams.get('rent'));
+            if (urlParams.get('rent_type')) document.getElementById('contract-payment-type').value = urlParams.get('rent_type');
+            if (urlParams.get('mgmt_fee')) document.getElementById('contract-fee').value = formatCurrency(urlParams.get('mgmt_fee'));
+            if (urlParams.get('cleaning_fee')) document.getElementById('contract-cleaning').value = formatCurrency(urlParams.get('cleaning_fee'));
+            if (urlParams.get('start_date')) document.getElementById('contract-start').value = urlParams.get('start_date');
+            if (urlParams.get('end_date')) document.getElementById('contract-end').value = urlParams.get('end_date');
+            if (urlParams.get('tenant_name')) document.getElementById('tenant-name').value = urlParams.get('tenant_name');
+            if (urlParams.get('tenant_phone')) document.getElementById('tenant-phone').value = formatPhone(urlParams.get('tenant_phone'));
+            if (urlParams.get('tenant_dob')) document.getElementById('tenant-dob').value = urlParams.get('tenant_dob');
+
+            if (contractId) {
+                await loadContractData(contractId);
+            }
+
+            if (currentAction === 'extend') {
+                document.getElementById('page-title').textContent = '계약 연장';
+            }
+
+            else if (currentAction === 'change') {
+                document.getElementById('page-title').textContent = '계약 변경';
+            }
+
+            else if (currentAction === 'view') {
+                document.getElementById('page-title').textContent = '계약 정보 확인';
+                disableForm();
+            }
+
+            if (urlParams.get('lock') === 'true') {
+                ['tenant-name', 'tenant-dob', 'tenant-phone', 'contract-building', 'contract-room'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.disabled = true;
+                });
+            }
+        });
+
+        function disableForm() {
+            // Disable all inputs and selects
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(el => el.disabled = true);
+
+            // Hide action buttons and date helpers
+            document.getElementById('submit-btn').style.display = 'none';
+            document.querySelectorAll('.btn-inline').forEach(el => el.style.display = 'none');
+
+            // Hide cancel button in view mode as top navbar has one
+            document.getElementById('cancel-btn').style.display = 'none';
+
+            // Show view actions (Edit, Extend, Terminate)
+            document.getElementById('edit-btn').style.display = 'block';
+            document.getElementById('extend-btn').style.display = 'block';
+            document.getElementById('terminate-btn').style.display = 'block';
+            document.getElementById('reset-btn').style.display = 'block';
+        }
+
+        function enableEditMode() {
+            // Re-enable all inputs (except readonly/pre-filled ones)
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(el => {
+                if (el.id === 'contract-room' && el.value) return; // Keep pre-filled room disabled if wanted
+                el.disabled = false;
+            });
+
+            // Toggle buttons
+            document.getElementById('submit-btn').style.display = 'block';
+            document.getElementById('cancel-btn').style.display = 'block';
+            document.getElementById('cancel-btn').textContent = '취소';
+
+            // Hide view actions
+            document.getElementById('edit-btn').style.display = 'none';
+            document.getElementById('extend-btn').style.display = 'none';
+            document.getElementById('terminate-btn').style.display = 'none';
+
+            document.querySelectorAll('.btn-inline').forEach(el => el.style.display = 'block');
+
+            // Change title
+            document.getElementById('page-title').textContent = '계약 수정';
+            currentAction = 'change';
+            window.history.replaceState({}, '', `/contract_new.html?action=change&contract_id=${contractId}`);
+        }
+
+        function enableExtendMode() {
+            const startInput = document.getElementById('contract-start');
+            const endInput = document.getElementById('contract-end');
+
+            if (startInput.value && endInput.value) {
+                const oldStart = new Date(startInput.value);
+                const oldEnd = new Date(endInput.value);
+
+                // Calculate duration in days (including both start and end dates usually)
+                // However, simple difference in time is most robust for "same period"
+                const durationMs = oldEnd.getTime() - oldStart.getTime();
+
+                // New Start = Old End + 1 day
+                const newStart = new Date(oldEnd);
+                newStart.setDate(newStart.getDate() + 1);
+
+                // New End = New Start + duration
+                const newEnd = new Date(newStart.getTime() + durationMs);
+
+                const formatDate = (d) => {
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${day}`;
+                };
+
+                startInput.value = formatDate(newStart);
+                endInput.value = formatDate(newEnd);
+            }
+
+            enableEditMode();
+            document.getElementById('page-title').textContent = '계약 연장';
+            currentAction = 'extend';
+            window.history.replaceState({}, '', `/contract_new.html?action=extend&contract_id=${contractId}`);
+        }
+
+        function openTerminateModal() {
+            document.getElementById('termination-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('terminate-modal').style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        document.getElementById('confirm-terminate-btn').onclick = async () => {
+            const endDate = document.getElementById('termination-date').value;
+            if (!endDate) return alert('날짜를 선택해 주세요.');
+
+            try {
+                const res = await fetch(`/api/contracts/${contractId}/terminate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ end_date: endDate })
+                });
+                if (res.ok) {
+                    alert('계약 종료 설정이 완료되었습니다.');
+                    location.href = '/tenants.html';
+                }
+            } catch (err) {
+                alert('오류가 발생했습니다.');
+            }
+        };
+
+        async function loadBuildings() {
+            const apiPath = user.role === 'admin' ? '/api/admin/buildings' : `/api/landlord/${user.id}/buildings`;
+            const res = await fetch(apiPath);
+            const buildings = await res.json();
+            const bSelect = document.getElementById('contract-building');
+            bSelect.innerHTML = '<option value="">건물 선택</option>';
+            buildings.forEach(b => {
+                bSelect.innerHTML += `<option value="${b.id}">${b.name}</option>`;
+            });
+
+            if (currentAction === 'new' && !urlParams.get('building_id') && !urlParams.get('building_name')) {
+                if (buildings.length > 0) {
+                    bSelect.value = buildings[0].id;
+                    await loadRooms();
+                }
+            }
+        }
+
+        async function loadVacantPostings() {
+            if (contractId) return;
+            try {
+                const res = await fetch(`/api/landlord/${user.id}/vacant-postings`);
+                vacantPostings = await res.json();
+                renderVacantPostings();
+            } catch (err) {
+                console.error('Failed to load vacant postings:', err);
+            }
+        }
+
+        function renderVacantPostings() {
+            const select = document.getElementById('vacant-postings-select');
+            const buildingId = document.getElementById('contract-building').value;
+            const roomId = document.getElementById('contract-room').value;
+
+            // Save current selection if any
+            const currentVal = select.value;
+
+            select.innerHTML = '<option value="">광고 내역에서 선택 (자동 입력)</option>';
+
+            const filtered = vacantPostings.filter(p => {
+                const bMatch = !buildingId || p.building_id == buildingId;
+                const rMatch = !roomId || p.room_id == roomId;
+                return bMatch && rMatch;
+            });
+
+            if (filtered.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = "";
+                opt.textContent = "건물과 호수에 맞는 광고 없음";
+                opt.disabled = true;
+                select.appendChild(opt);
+            } else {
+                filtered.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.posting_id;
+                    opt.textContent = `${p.building_name} ${p.room_number}호 (${p.title})`;
+                    select.appendChild(opt);
+                });
+
+                // Try to restore previous selection if it's still in the filtered list
+                if (filtered.some(f => f.posting_id == currentVal)) {
+                    select.value = currentVal;
+                }
+            }
+        }
+
+        async function applyPostingData(selectedId) {
+            if (!selectedId) return;
+            const p = vacantPostings.find(x => x.posting_id == selectedId);
+            if (!p) return;
+
+            if (p.contract_id) {
+                activeContractId = p.contract_id;
+            } else {
+                activeContractId = null; // New contract will be created
+            }
+
+            // Auto-fill fields
+            document.getElementById('contract-building').value = p.building_id;
+            await loadRooms(p.room_id);
+            document.getElementById('contract-start').value = p.contract_start_date || '';
+            document.getElementById('contract-deposit').value = formatCurrency(p.deposit || 0);
+            document.getElementById('contract-rent').value = formatCurrency(p.monthly_rent || 0);
+            document.getElementById('contract-fee').value = formatCurrency(p.maintenance_fee || 0);
+            document.getElementById('contract-cleaning').value = formatCurrency(p.cleaning_fee || 0);
+            document.getElementById('contract-payment-type').value = p.payment_type || 'postpaid';
+        }
+
+        async function loadRooms(selectedRoomIdentifier = null) {
+            const buildingId = document.getElementById('contract-building').value;
+            const rSelect = document.getElementById('contract-room');
+
+            if (!buildingId) {
+                rSelect.innerHTML = '<option value="">건물을 먼저 선택해주세요</option>';
+                return;
+            }
+
+            const res = await fetch(`/api/buildings/${buildingId}/rooms`);
+            const rooms = await res.json();
+            rSelect.innerHTML = '<option value="">호수 선택</option>';
+            rooms.forEach(r => {
+                if (r.room_number !== '0') {
+                    rSelect.innerHTML += `<option value="${r.id}">${r.room_number}호</option>`;
+                }
+            });
+
+            let matchedRoom = null;
+            if (selectedRoomIdentifier) {
+                matchedRoom = rooms.find(r => r.id == selectedRoomIdentifier || r.room_number == selectedRoomIdentifier);
+            } else {
+                matchedRoom = rooms.find(r => r.room_number !== '0');
+            }
+
+            if (matchedRoom) {
+                rSelect.value = matchedRoom.id;
+            }
+            renderVacantPostings();
+        }
+
+        async function loadContractData(id) {
+            const res = await fetch(`/api/contract/${id}/full-details`);
+            const data = await res.json();
+            const c = data.contract;
+            currentTenantId = c.tenant_id;
+            if (currentTenantId) document.getElementById('btn-delete-tenant').style.display = 'block';
+
+            document.getElementById('tenant-name').value = c.tenant_name;
+            document.getElementById('tenant-dob').value = c.birth_date;
+            document.getElementById('tenant-phone').value = formatPhone(c.phone_number);
+            document.getElementById('tenant-phone').value = formatPhone(c.phone_number);
+            document.getElementById('contract-building').value = c.building_id;
+            await loadRooms(c.room_number);
+            document.getElementById('contract-start').value = c.contract_start_date ? c.contract_start_date.split('T')[0] : '';
+            document.getElementById('contract-end').value = c.contract_end_date ? c.contract_end_date.split('T')[0] : '';
+            document.getElementById('contract-payment-type').value = c.payment_type;
+            document.getElementById('contract-deposit').value = formatCurrency(c.deposit);
+            document.getElementById('contract-rent').value = formatCurrency(c.monthly_rent);
+            document.getElementById('contract-fee').value = formatCurrency(c.maintenance_fee);
+            document.getElementById('contract-cleaning').value = formatCurrency(c.cleaning_fee || 0);
+        }
+
+        function addMonths(months) {
+            const startInput = document.getElementById('contract-start');
+            const endInput = document.getElementById('contract-end');
+
+            if (!startInput.value) {
+                alert('계약 시작일을 먼저 선택해주세요.');
+                return;
+            }
+
+            let d;
+
+            if (endInput.value) {
+                // Increment from current end date
+                d = new Date(endInput.value);
+                d.setMonth(d.getMonth() + months);
+            }
+
+            else {
+                // Initial: Start date + offset months - 1 day
+                d = new Date(startInput.value);
+                d.setMonth(d.getMonth() + months);
+                d.setDate(d.getDate() - 1);
+            }
+
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const dVal = String(d.getDate()).padStart(2, '0');
+
+            endInput.value = `${y}-${m}-${dVal}`;
+        }
+
+        function addAmount(id, amount) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const currentVal = unformatCurrency(el.value || '0');
+            el.value = formatCurrency(currentVal + amount);
+        }
+
+        function handleCancel() {
+            if (isIframe) {
+                window.parent.postMessage('close_modal', '*');
+            }
+
+            else {
+                window.history.back();
+            }
+        }
+
+        function resetContractData() {
+            if (!activeContractId) return;
+            if (!confirm('정말로 이 계약의 모든 납부 내역(Invoice)과 입금 내역(Payment)을 초기화하시겠습니까?\n이 작업은 되돌릴 수 없으며, 계약 생성 시점의 기본 항목들로 재생성됩니다.')) return;
+
+            fetch(`/api/contracts/${activeContractId}/reset`, {
+                method: 'POST'
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) throw new Error(data.error);
+                    alert('데이터가 초기화되었습니다.');
+                    location.reload();
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('초기화 중 오류가 발생했습니다: ' + err.message);
+                });
+        }
+
+        async function submitContract() {
+            const data = {
+                landlord_id: user.id,
+                tenant_name: document.getElementById('tenant-name').value,
+                tenant_dob: document.getElementById('tenant-dob').value,
+                tenant_phone: document.getElementById('tenant-phone').value,
+                building_id: document.getElementById('contract-building').value,
+                room_id: document.getElementById('contract-room').value,
+                start_date: document.getElementById('contract-start').value,
+                end_date: document.getElementById('contract-end').value,
+                deposit: unformatCurrency(document.getElementById('contract-deposit').value),
+                monthly_rent: unformatCurrency(document.getElementById('contract-rent').value),
+                management_fee: unformatCurrency(document.getElementById('contract-fee').value),
+                cleaning_fee: unformatCurrency(document.getElementById('contract-cleaning').value),
+                payment_type: document.getElementById('contract-payment-type').value
+            };
+
+            if (!data.tenant_name || !data.building_id || !data.room_id) {
+                alert('필수 정보를 모두 입력해주세요.');
+                return;
+            }
+
+            try {
+                // Check if user exists first to avoid UNIQUE constraint violation on login_id
+                const existingUserId = await fetchUserId(data.tenant_name, data.tenant_dob);
+                let targetUserId = existingUserId;
+
+                if (!targetUserId && currentAction === 'change') {
+                    // If no existing user found matches the new details, but we are in change mode,
+                    // we update the CURRENT tenant (correcting their info).
+                    // This implies the new Name/DOB slot is free (since fetch returned null).
+                    targetUserId = currentTenantId;
+                }
+
+                // If !targetUserId and action !== 'change', we send null (Create New)
+
+                // ALWAYS Save/Update Tenant first
+                const userSavePayload = {
+                    id: targetUserId,
+                    password: '1234',
+                    nickname: data.tenant_name,
+                    role: 'tenant',
+                    birth_date: data.tenant_dob,
+                    phone_number: data.tenant_phone,
+                    building_id: data.building_id,
+                    status: '승인',
+                    approved: 1
+                };
+
+                // Only generate login_id for NEW users
+                if (!targetUserId && !userSavePayload.login_id) {
+                    userSavePayload.login_id = data.tenant_name + data.tenant_dob.replace(/-/g, '').slice(2);
+                }
+
+                ;
+
+                const userRes = await fetch('/api/users/quick', {
+
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+
+                    ,
+                    body: JSON.stringify(userSavePayload)
+                });
+                const userData = await userRes.json();
+
+                if (!userRes.ok) {
+                    throw new Error(userData.error || '세입자 정보 저장 실패');
+                }
+
+                data.tenant_id = userData.userId;
+
+                let url = '/api/contracts/full';
+                let method = 'POST';
+
+                let payload = {
+                    tenant_id: data.tenant_id,
+                    landlord_id: data.landlord_id,
+                    payment_type: data.payment_type,
+                    contract_start_date: data.start_date,
+                    contract_end_date: data.end_date,
+                    deposit: data.deposit,
+                    monthly_rent: data.monthly_rent,
+                    management_fee: data.management_fee,
+                    cleaning_fee: data.cleaning_fee,
+                    room_id: data.room_id
+                };
+
+                if (activeContractId) {
+                    url = `/api/contracts/${activeContractId}`;
+                    method = 'PUT';
+                    payload.keyword = data.tenant_name; // Maintain keyword on update
+                }
+
+                const contractRes = await fetch(url, {
+
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+
+                    ,
+                    body: JSON.stringify(payload)
+                });
+
+                if (contractRes.ok) {
+                    if (isIframe) {
+                        window.parent.postMessage('contract_saved', '*');
+                    }
+
+                    else {
+                        window.location.href = '/tenants.html';
+                    }
+                }
+
+                else {
+                    const errData = await contractRes.json();
+                    alert('저장 실패: ' + (errData.error || '알 수 없는 오류'));
+                }
+            }
+
+            catch (err) {
+                console.error(err);
+                alert('오류가 발생했습니다.');
+            }
+        }
+
+        async function fetchUserId(name, dob) {
+            const res = await fetch('/api/users/find', {
+
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+
+                ,
+                body: JSON.stringify({
+                    name, birth_date: dob, role: 'tenant'
+                })
+            });
+            const users = await res.json();
+            return users[0]?.id;
+        }
+
+
+        async function deleteTenant() {
+            if (!currentTenantId) return;
+            if (!confirm('정말로 이 세입자를 영구 삭제하시겠습니까? 관련 데이터(계약, 메시지 등)가 모두 삭제됩니다.')) return;
+
+            try {
+                const res = await fetch(`/api/users/${currentTenantId}?hard=true`, { method: 'DELETE' });
+                const data = await res.json();
+                if (res.ok) {
+                    alert('세입자가 삭제되었습니다.');
+                    if (isIframe) {
+                        window.parent.postMessage('reload_tenants', '*');
+                    }
+                    window.location.reload();
+                } else {
+                    alert('삭제 실패: ' + data.error);
+                }
+            } catch (e) {
+                console.error(e);
+                alert('오류가 발생했습니다.');
+            }
+        }
+
+    </script>
+</body>
+
+</html>

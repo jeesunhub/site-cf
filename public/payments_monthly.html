@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Detail - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        .container {
+            padding: 0;
+            margin: 0;
+            width: 100%;
+        }
+
+        .payment-container {
+            max-width: none;
+            margin: 0;
+            width: 100%;
+        }
+
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+            margin-bottom: 0;
+            width: 100%;
+            box-sizing: border-box;
+            /* Important for padding */
+        }
+
+        .header-section h1 {
+            font-size: 1.25rem !important;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            white-space: nowrap;
+            margin-right: 1rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.2rem;
+        }
+
+        .filters-section {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-group label {
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+
+        /* List Layout Styles */
+        .mgmt-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            margin-top: 0;
+        }
+
+        .mgmt-item {
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s;
+        }
+
+        .mgmt-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .mgmt-summary {
+            display: flex;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            gap: 1.2rem;
+            min-height: 5rem;
+            cursor: pointer;
+        }
+
+        .mgmt-left {
+            width: 4.5rem;
+            padding: 0.4rem 0.2rem;
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            border-radius: 0.4rem;
+            text-align: center;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            min-height: 3.2rem;
+        }
+
+        .mgmt-left .b-name {
+            font-size: 0.65rem;
+            opacity: 0.7;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 400;
+        }
+
+        .mgmt-left .r-num {
+            font-size: 0.9rem;
+            font-weight: 700;
+            width: 100%;
+        }
+
+        .mgmt-center {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
+            min-width: 0;
+        }
+
+        .center-top {
+            flex: 1;
+            display: flex;
+            align-items: flex-end;
+            font-size: 1rem;
+            font-weight: 400;
+            padding-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #f8fafc;
+        }
+
+        .center-bottom {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.5);
+            gap: 1px;
+            padding-top: 2px;
+        }
+
+        .mgmt-right {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+            align-self: center;
+        }
+
+        .action-btn {
+            height: 2rem;
+            padding: 0 1rem;
+            border-radius: 0.4rem;
+            border: none;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: opacity 0.2s;
+        }
+
+        .action-btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-edit {
+            background: var(--primary);
+        }
+
+        .btn-del {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-del:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: #1e293b;
+            padding: 2rem;
+            border-radius: 1rem;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .modal-footer {
+            margin-top: 2rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .text-input-area {
+            width: 100%;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            color: #fff;
+            padding: 1rem;
+            resize: vertical;
+            font-family: inherit;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar will be rendered by JS -->
+
+    <div class="header-section"
+        style="height: auto; min-height: 3.5rem; flex-direction: column; align-items: flex-start; padding: 0.5rem 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; height: 2.5rem;">
+            <h1>납부 관리</h1>
+            <div id="tenant-info-header" style="font-size: 0.9rem; opacity: 0.8; text-align: right;">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+        <div id="header-filters"
+            style="display: flex; gap: 0.8rem; align-items: center; width: 100%; margin-top: 0.5rem; flex-wrap: wrap; height: 0; overflow: hidden;">
+            <!-- Hidden or removed dropdowns if not needed -->
+        </div>
+    </div>
+
+    <div class="container payment-container" style="padding: 0;">
+        <div id="payment-list" class="mgmt-list">
+            <!-- Populated by JS -->
+            <div style="text-align: center; padding: 3rem; opacity: 0.5;">로딩 중...</div>
+        </div>
+    </div>
+
+    <!-- Paste Modal -->
+    <div id="paste-modal" class="modal" onclick="if(event.target === this) closeModal('paste-modal')">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>문자 붙여넣기</h2>
+            </div>
+            <textarea id="paste-input" class="text-input-area" placeholder="입금 문자를 여기에 붙여넣으세요..."></textarea>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('paste-modal')">취소</button>
+                <button class="btn" onclick="processPaste()">완료</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script src="/js/common.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+        const urlParams = new URLSearchParams(window.location.search);
+        let targetTenantId = parseInt(urlParams.get('tenant_id')); // For Landlord/Admin
+        let ledgerData = [];
+        let activeContracts = [];
+        let currentParsedData = null;
+        let selectedContractId = null;
+
+        function getNextMonthYYYYMM() {
+            const d = new Date();
+            d.setMonth(d.getMonth() + 1);
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            return `${yyyy}-${mm}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!user) { window.location.href = '/index.html'; return; }
+
+            if (user.role === 'tenant') {
+                targetTenantId = user.id;
+            } else {
+                if (!targetTenantId) {
+                    alert('잘못된 접근입니다.');
+                    window.location.href = 'payments.html';
+                    return;
+                }
+                document.body.classList.add('has-back-button');
+            }
+
+            renderNavbar();
+
+            if (user.role === 'landlord' || user.role === 'admin') {
+                const navBack = document.querySelector('.nav-back-btn');
+                if (navBack) {
+                    navBack.onclick = (e) => {
+                        e.preventDefault();
+                        window.location.href = 'payments.html';
+                    };
+                }
+            }
+
+            setupHeader();
+            await loadTableData();
+            await loadActiveContracts();
+        });
+
+        function setupHeader() {
+            const headerTitle = document.querySelector('.header-section h1');
+            headerTitle.textContent = '월별 납부 내역';
+        }
+
+        function updateTenantHeader(data) {
+            const tenantRows = data.filter(r => r.tenant_id === targetTenantId);
+            if (tenantRows.length === 0) return;
+
+            const info = tenantRows[0];
+            const headerInfo = document.getElementById('tenant-info-header');
+
+            headerInfo.innerHTML = `
+                <div style="font-weight: 600; color: #fff; font-size: 1rem;">${info.building_name} ${info.room_number || ''}호 ${info.tenant_name}</div>
+                <div style="font-size: 0.75rem; opacity: 0.6; margin-top: 2px;">
+                    ${formatUnit(info.deposit || 0)} / ${formatUnit(info.monthly_rent || 0)} / ${formatUnit(info.maintenance_fee || 0)}
+                </div>
+            `;
+        }
+
+        async function loadActiveContracts() {
+            if (user.role === 'landlord' || user.role === 'admin') {
+                try {
+                    const res = await fetch(`/api/landlord/${user.id}/contracts/active`);
+                    if (res.ok) activeContracts = await res.json();
+                } catch (e) { console.error(e); }
+            }
+        }
+
+        async function loadTableData() {
+            const params = new URLSearchParams();
+            params.append('role', user.role);
+            params.append('user_id', user.id);
+
+            try {
+                const res = await fetch(`/api/payments/ledger?${params.toString()}`);
+                if (res.status === 404) {
+                    renderMonthlyList([]);
+                    return;
+                }
+                if (!res.ok) throw new Error('Server error');
+                const data = await res.json();
+                ledgerData = data;
+                updateTenantHeader(data);
+                renderMonthlyList(data);
+            } catch (err) {
+                document.getElementById('payment-list').innerHTML = `<div style="text-align:center; padding:2rem; color: #f87171;">데이터 로딩 실패</div>`;
+            }
+        }
+
+        function formatYYMMDD(dateStr) {
+            if (!dateStr || dateStr === '-') return '-';
+            let s = dateStr;
+            if (s && !s.includes('Z') && !s.includes('+')) s += 'Z';
+            const date = new Date(s);
+            if (isNaN(date.getTime())) return '-';
+            const yy = String(date.getFullYear()).slice(2);
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            return `${yy}-${mm}-${dd}`;
+        }
+
+        function formatUnit(amount) {
+            if (!amount) return '0';
+            return (amount / 10000).toLocaleString();
+        }
+
+        function formatCurrency(amount) {
+            return amount.toLocaleString();
+        }
+
+        function renderMonthlyList(allData) {
+            const list = document.getElementById('payment-list');
+            list.innerHTML = '';
+
+            let userRows = allData.filter(r => r.tenant_id === targetTenantId);
+
+            if (userRows.length === 0) {
+                list.innerHTML = '<div style="text-align:center; padding:3rem; opacity:0.5;">납부 내역이 없습니다.</div>';
+                return;
+            }
+
+            const nextMonth = getNextMonthYYYYMM();
+
+            // Sort DESCENDING (Newest first), but always put Deposit at the bottom
+            const isDeposit = (r) => r.invoice_type === 'deposit' || (typeof r.invoice_type === 'number' && (r.invoice_type & 1));
+
+            userRows.sort((a, b) => {
+                const aDep = isDeposit(a);
+                const bDep = isDeposit(b);
+                if (aDep && !bDep) return 1;
+                if (!aDep && bDep) return -1;
+
+                // If both are deposit or neither is, sort by bill_month DESC
+                if (a.bill_month !== b.bill_month) {
+                    return b.bill_month.localeCompare(a.bill_month);
+                }
+                return 0;
+            });
+
+            userRows = userRows.filter(r => r.bill_month <= nextMonth);
+
+            userRows.forEach(row => {
+                const item = document.createElement('div');
+                item.className = 'mgmt-item';
+
+                const dueDate = row.due_date || `${row.bill_month}-01`;
+                const displayDueDate = dueDate.slice(5); // MM-DD
+
+                const due = row.due_amount;
+                const paid = row.paid_amount;
+
+                const unpaid = due - paid;
+
+                let statusText = row.invoice_status || '정산대기';
+                if (unpaid <= 0) {
+                    statusText = '완납';
+                } else if (paid > 0) {
+                    statusText = '부분납부';
+                }
+
+                let statusColor = (statusText === '완납') ? '#4ade80' : '#fbbf24';
+
+                const monthNum = parseInt(row.bill_month.slice(5), 10);
+                let leftBoxTitle = '';
+                const typeMap = {
+                    'deposit': '보증금',
+                    'monthly_rent': `${monthNum}월 월세`,
+                    'maintenance_fee': `${monthNum}월 관리비`,
+                    'cleaning_fee': '청소비',
+                    'extra_fee': '추가납부금'
+                };
+
+                const buildingName = row.building_name || '미지정';
+                if (typeMap[row.invoice_type]) {
+                    leftBoxTitle = typeMap[row.invoice_type];
+                } else {
+                    // Legacy bitmask support
+                    if (row.invoice_type & 1) leftBoxTitle = '보증금';
+                    else if (row.invoice_type & 2) leftBoxTitle = `${monthNum}월 월세`;
+                    else if (row.invoice_type & 4) leftBoxTitle = `${monthNum}월 관리비`;
+                    else if (row.invoice_type & 8) leftBoxTitle = '청소비';
+                    else leftBoxTitle = '기타';
+                }
+
+                let paymentLines = '';
+                if (row.payment_details) {
+                    const details = row.payment_details.split(';')
+                        .map(d => {
+                            const [amt, date] = d.split('|');
+                            return { amount: parseInt(amt, 10), date: date };
+                        })
+                        .filter(d => d.amount > 0)
+                        .sort((a, b) => b.date.localeCompare(a.date));
+
+                    paymentLines = details.map(d => {
+                        let pDate = '-';
+                        if (d.date) {
+                            let dateStr = d.date;
+                            if (dateStr && !dateStr.includes('T')) {
+                                dateStr = dateStr.replace(' ', 'T');
+                            }
+                            if (dateStr && !dateStr.includes('Z') && !dateStr.includes('+')) {
+                                dateStr += 'Z';
+                            }
+                            const dateObj = new Date(dateStr);
+                            if (!isNaN(dateObj.getTime())) {
+                                pDate = dateObj.toLocaleString('ko-KR', {
+                                    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false
+                                });
+                            }
+                        }
+                        return `<div>납부: ${formatUnit(d.amount)}만원 (${pDate})</div>`;
+                    }).join('');
+                }
+
+                if (!paymentLines && paid > 0) {
+                    // Fallback if payment_details is missing for some reason
+                    let pDate = '-';
+                    if (row.last_paid_date) {
+                        let dateStr = row.last_paid_date;
+                        if (dateStr && !dateStr.includes('T')) {
+                            dateStr = dateStr.replace(' ', 'T');
+                        }
+                        if (dateStr && !dateStr.includes('Z') && !dateStr.includes('+')) {
+                            dateStr += 'Z';
+                        }
+                        const dateObj = new Date(dateStr);
+                        if (!isNaN(dateObj.getTime())) {
+                            pDate = dateObj.toLocaleString('ko-KR', {
+                                month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false
+                            });
+                        }
+                    }
+                    paymentLines = `<div>납부: ${formatUnit(paid)}만원 (${pDate})</div>`;
+                }
+
+                if (!paymentLines) {
+                    paymentLines = '<div>납부 내역 없음</div>';
+                }
+
+                const subLine = `
+                    ${paymentLines}
+                    <div style="${unpaid > 0 ? 'color: #f87171;' : ''}">미납: ${formatUnit(unpaid)}만원</div>
+                `;
+
+                item.innerHTML = `
+                    <div class="mgmt-summary" onclick="goToNewPayment(${row.tenant_id}, ${row.contract_id}, '${row.tenant_name}', '${row.building_name}', '${row.room_number}')" style="padding: 0.8rem 1rem;">
+                         <div class="mgmt-left">
+                             <div class="r-num">${leftBoxTitle}</div>
+                        </div>
+                        <div class="mgmt-center">
+                            <div class="center-top" style="font-size:1rem; font-weight:600; display: flex; align-items: center;">
+                                <span>${formatUnit(due)}만원</span>
+                                <span style="font-size:0.85rem; opacity:0.6; font-weight:400; margin-left:0.6rem;">~${displayDueDate}</span>
+                                <span style="font-size: 0.65rem; background: ${statusColor}26; color: ${statusColor}; padding: 1px 6px; border-radius: 4px; margin-left: 8px; border: 1px solid ${statusColor}33; font-weight: 600; white-space: nowrap;">
+                                    ${statusText}
+                                </span>
+                            </div>
+                            <div class="center-bottom" style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 2px;">
+                                ${subLine}
+                            </div>
+                        </div>
+                        <div class="mgmt-right" style="display: flex; align-items: center; gap: 0.8rem;">
+                            ${(user.role !== 'tenant' && row.invoice_id) ? `
+                                <button class="btn-del" onclick="event.stopPropagation(); deleteRecord(${row.invoice_id})">
+                                    삭제
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function goToNewPayment(tenantId, contractId, nickname, building, room) {
+            if (user.role === 'tenant') return;
+            const params = new URLSearchParams();
+            params.append('tenant_id', tenantId);
+            params.append('contract_id', contractId);
+            params.append('nickname', nickname);
+            params.append('building', building);
+            params.append('room_number', room);
+            window.location.href = `payments_new.html?${params.toString()}`;
+        }
+
+        async function deleteRecord(invoiceId) {
+            if (!confirm('해당 내역을 삭제하시겠습니까?\n관련 입금 데이터와 배정 내역이 모두 삭제됩니다.')) return;
+
+            try {
+                const res = await fetch(`/api/invoices/${invoiceId}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    alert('삭제되었습니다.');
+                    loadTableData(); // Refresh list
+                } else {
+                    let errorMessage = '삭제 실패';
+                    const contentType = res.headers.get("content-type");
+                    if (contentType && contentType.indexOf("application/json") !== -1) {
+                        const err = await res.json();
+                        errorMessage += ': ' + (err.error || '알 수 없는 오류');
+                    } else {
+                        errorMessage += ' (Status: ' + res.status + ')';
+                    }
+                    alert(errorMessage);
+                }
+            } catch (e) {
+                console.error(e);
+                alert('삭제 중 오류가 발생했습니다.');
+            }
+        }
+
+        function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                console.log('Excel Data:', jsonData);
+                alert(`${jsonData.length}개의 데이터가 로드되었습니다. 구현 중입니다.`);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // --- Text Paste & Parsing Logic ---
+
+        function openPasteModal() {
+            document.getElementById('paste-input').value = '';
+            document.getElementById('paste-modal').style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function processPaste() {
+            const text = document.getElementById('paste-input').value.trim();
+            if (!text) return alert('텍스트를 입력해주세요.');
+
+            const parsed = parsePaymentText(text);
+            if (!parsed) {
+                return alert('파싱 실패: "입금" 키워드를 찾을 수 없거나 형식이 올바르지 않습니다.');
+            }
+
+            sessionStorage.setItem('pending_payment', JSON.stringify(parsed));
+            window.location.href = 'payments_keyword.html';
+        }
+
+        function parsePaymentText(text) {
+            const depositIdx = text.indexOf('입금');
+            if (depositIdx === -1) return null;
+
+            // 1. Amount: number immediately after "입금"
+            const afterDeposit = text.substring(depositIdx + "입금".length).trim();
+            const amountMatch = afterDeposit.match(/^([\d,]+)/);
+            if (!amountMatch) return null;
+            const amount = parseInt(amountMatch[1].replace(/,/g, ''), 10);
+
+            // 2. Date/Time: MM/DD [HH:mm]
+            const dateTimeMatch = text.match(/(\d{1,2})\/(\d{1,2})(\s+(\d{1,2}):(\d{1,2}))?/);
+            let paymentDate = new Date();
+            if (dateTimeMatch) {
+                const month = parseInt(dateTimeMatch[1], 10);
+                const day = parseInt(dateTimeMatch[2], 10);
+                const hour = dateTimeMatch[4] ? parseInt(dateTimeMatch[4], 10) : 12;
+                const min = dateTimeMatch[5] ? parseInt(dateTimeMatch[5], 10) : 0;
+
+                const today = new Date();
+                const currentYear = today.getFullYear();
+                const dates = [
+                    new Date(currentYear - 1, month - 1, day, hour, min),
+                    new Date(currentYear, month - 1, day, hour, min),
+                    new Date(currentYear + 1, month - 1, day, hour, min)
+                ];
+                paymentDate = dates.reduce((prev, curr) => {
+                    return (Math.abs(curr - today) < Math.abs(prev - today) ? curr : prev);
+                });
+            }
+
+            // 3. Tokens before amount
+            const beforeDeposit = text.substring(0, depositIdx).trim();
+            const tokens = beforeDeposit.split(/[<>\[\]\s\n]+/).filter(t => t.length > 0);
+            const keyword = tokens.length > 0 ? tokens[tokens.length - 1] : '';
+
+            return {
+                tokens: tokens,
+                keyword: keyword,
+                amount: amount,
+                date: paymentDate,
+                originalText: text
+            };
+        }
+    </script>
+</body>
+
+</html>

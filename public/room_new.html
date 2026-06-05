@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>방 내놓기 등록 - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 70px;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.25rem;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .container {
+            width: 100%;
+            margin: 0;
+            padding: 1.5rem;
+            box-sizing: border-box;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.8rem;
+            color: white;
+            font-size: 1rem;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .photo-upload-group {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1rem;
+            border-radius: 1rem;
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+        }
+
+        .photo-preview-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        .photo-preview-item {
+            width: 80px;
+            height: 80px;
+            border-radius: 0.6rem;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .photo-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .remove-photo {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2.5rem;
+            padding-bottom: 3rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 1rem;
+            border-radius: 0.8rem;
+            border: none;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-submit {
+            background: rgba(99, 102, 241, 0.3);
+            color: white;
+            border: 1px solid rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-submit:hover {
+            background: rgba(99, 102, 241, 0.45);
+            border-color: rgba(99, 102, 241, 0.6);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+
+<body class="has-back-button">
+    <!-- Navbar -->
+    <div class="page-header">
+        <h1>방 내놓기 등록</h1>
+    </div>
+
+    <div class="container">
+        <div class="form-group">
+            <label>건물 선택</label>
+            <select id="modal-building" class="form-input" onchange="updateMemo(this.value)">
+                <option value="">건물을 선택하세요</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>호수 선택</label>
+            <select id="modal-room" class="form-input">
+                <option value="">호수를 선택하세요</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>광고 제목</label>
+            <input type="text" id="modal-title" class="form-input" placeholder="광고 제목 입력">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>보증금</label>
+                <input type="number" id="modal-deposit" class="form-input" placeholder="0">
+            </div>
+            <div class="form-group">
+                <label>월세</label>
+                <input type="number" id="modal-rent" class="form-input" placeholder="0">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>관리비</label>
+                <input type="number" id="modal-mgmt" class="form-input" placeholder="0">
+            </div>
+            <div class="form-group">
+                <label>청소비</label>
+                <input type="number" id="modal-cleaning" class="form-input" placeholder="0">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>입실 가능 날짜</label>
+            <input type="date" id="modal-date" class="form-input">
+        </div>
+
+        <div class="form-group">
+            <label>사진 첨부 (최대 5장)</label>
+            <div class="photo-upload-group">
+                <button class="btn btn-cancel"
+                    style="padding:0.6rem 1rem; font-size:0.9rem; margin-bottom:0.5rem; width: auto; flex: none;"
+                    onclick="document.getElementById('photo-input').click()">사진 추가</button>
+                <input type="file" id="photo-input" multiple accept="image/*" style="display:none"
+                    onchange="handleFileSelect(this)">
+                <div id="photo-preview" class="photo-preview-list"></div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>상세 설명 (메모)</label>
+            <textarea id="modal-memo" class="form-input" rows="6" placeholder="상세 정보를 입력해주세요"></textarea>
+        </div>
+
+        <div class="action-btns">
+            <button class="btn btn-cancel" onclick="history.back()">취소</button>
+            <button class="btn btn-submit" id="btn-save" onclick="submitRoomAdv()">등록 완료</button>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user) location.href = '/index.html';
+        const editId = new URLSearchParams(window.location.search).get('id');
+        let cachedBuildings = [];
+        let selectedFiles = [];
+        let existingImages = [];
+        let currentRelatedTable = 'room';
+        let currentRelatedId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            renderNavbar();
+            if (editId) {
+                document.querySelector('.page-header h1').textContent = '방 내놓기 수정';
+                document.getElementById('btn-save').textContent = '수정 완료';
+                await loadEditData();
+            } else {
+                document.getElementById('modal-date').value = new Date().toISOString().split('T')[0];
+                await fetchBuildings();
+            }
+        });
+
+        async function loadEditData() {
+            try {
+                const res = await fetch(`/api/postings/${editId}`);
+                const ad = await res.json();
+
+                await fetchBuildings();
+                currentRelatedTable = ad.related_table || 'room';
+                currentRelatedId = ad.related_id;
+                document.getElementById('modal-building').value = ad.room_building_id;
+                await fetchRooms(ad.room_building_id, ad.room_id);
+
+                document.getElementById('modal-title').value = ad.title || '';
+                document.getElementById('modal-deposit').value = ad.deposit || 0;
+                document.getElementById('modal-rent').value = ad.rent || 0;
+                document.getElementById('modal-mgmt').value = ad.management_fee || 0;
+                document.getElementById('modal-cleaning').value = ad.cleaning_fee || 0;
+                document.getElementById('modal-date').value = ad.available_date || '';
+                document.getElementById('modal-memo').value = ad.description || '';
+
+                if (ad.images) {
+                    existingImages = ad.images;
+                    renderPreviews();
+                }
+            } catch (err) {
+                console.error(err);
+                alert('데이터를 불러오는데 실패했습니다.');
+            }
+        }
+
+        async function fetchBuildings() {
+            const select = document.getElementById('modal-building');
+            select.innerHTML = '<option value="">로딩 중...</option>';
+
+            let url = '';
+            if (user.role === 'admin') url = '/api/admin/buildings';
+            else url = `/api/landlord/${user.id}/buildings`;
+
+            try {
+                const res = await fetch(url);
+                cachedBuildings = await res.json();
+
+                select.innerHTML = '<option value="">건물을 선택하세요</option>';
+                cachedBuildings.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.id;
+                    opt.textContent = b.name;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                console.error(err);
+                select.innerHTML = '<option value="">건물 로드 실패</option>';
+            }
+        }
+
+        function updateMemo(buildingId) {
+            const building = cachedBuildings.find(b => b.id == buildingId);
+            const memoArea = document.getElementById('modal-memo');
+            if (building && building.memo) {
+                memoArea.value = building.memo;
+            } else {
+                memoArea.value = '';
+            }
+            fetchRooms(buildingId);
+        }
+
+        async function fetchRooms(buildingId, selectedRoomId = null) {
+            const select = document.getElementById('modal-room');
+            if (!buildingId) {
+                select.innerHTML = '<option value="">호수를 선택하세요</option>';
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/buildings/${buildingId}/rooms`);
+                const rooms = await res.json();
+
+                select.innerHTML = '<option value="">호수를 선택하세요</option>';
+                rooms.forEach(r => {
+                    if (r.room_number !== '0') {
+                        const opt = document.createElement('option');
+                        opt.value = r.id;
+                        opt.textContent = r.room_number + '호';
+                        if (selectedRoomId && r.id == selectedRoomId) opt.selected = true;
+                        select.appendChild(opt);
+                    }
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function handleFileSelect(input) {
+            const files = Array.from(input.files);
+            if (selectedFiles.length + files.length > 5) {
+                alert('사진은 최대 5장까지만 업로드 가능합니다.');
+                return;
+            }
+
+            selectedFiles = [...selectedFiles, ...files];
+            renderPreviews();
+        }
+
+        function renderPreviews() {
+            const list = document.getElementById('photo-preview');
+            list.innerHTML = '';
+
+            // Render existing images
+            existingImages.forEach((img, idx) => {
+                const item = document.createElement('div');
+                item.className = 'photo-preview-item';
+                item.innerHTML = `
+                    <img src="${img.image_url}">
+                    <div class="remove-photo" onclick="removeExistingPhoto(${img.id}, ${idx})">×</div>
+                `;
+                list.appendChild(item);
+            });
+
+            // Render new files
+            selectedFiles.forEach((file, idx) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const item = document.createElement('div');
+                    item.className = 'photo-preview-item';
+                    item.innerHTML = `
+                        <img src="${e.target.result}">
+                        <div class="remove-photo" onclick="removePhoto(${idx})">×</div>
+                    `;
+                    list.appendChild(item);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function removeExistingPhoto(imgId, idx) {
+            if (!confirm('사진을 삭제하시겠습니까?')) return;
+            try {
+                const res = await fetch(`/api/images/${imgId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    existingImages.splice(idx, 1);
+                    renderPreviews();
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function removePhoto(idx) {
+            selectedFiles.splice(idx, 1);
+            renderPreviews();
+        }
+
+        async function submitRoomAdv() {
+            const rawRoomId = document.getElementById('modal-room').value;
+            if (!rawRoomId) return alert('호수를 선택해주세요.');
+
+            const btn = document.getElementById('btn-save');
+            btn.disabled = true;
+            btn.textContent = '등록 중...';
+
+            const formData = new FormData();
+            // If it's a contract-based ad, we keep the original related_id (the contract id)
+            // If it's a room-based ad, it uses the selected room id.
+            const finalRelatedId = currentRelatedTable === 'contract' ? currentRelatedId : parseInt(rawRoomId, 10);
+
+            formData.append('related_id', finalRelatedId);
+            formData.append('type', currentRelatedTable);
+            formData.append('building_id', document.getElementById('modal-building').value);
+            formData.append('room_id', rawRoomId);
+            formData.append('title', document.getElementById('modal-title').value);
+            formData.append('description', document.getElementById('modal-memo').value);
+            formData.append('deposit', document.getElementById('modal-deposit').value || 0);
+            formData.append('rent', document.getElementById('modal-rent').value || 0);
+            formData.append('management_fee', document.getElementById('modal-mgmt').value || 0);
+            formData.append('cleaning_fee', document.getElementById('modal-cleaning').value || 0);
+            formData.append('available_date', document.getElementById('modal-date').value);
+            formData.append('created_by', user.id);
+
+            selectedFiles.forEach(file => formData.append('photos', file));
+
+            try {
+                const url = editId ? `/api/postings/${editId}` : '/api/postings';
+                const method = editId ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method: method,
+                    body: formData
+                });
+                if (res.ok) {
+                    alert('광고가 등록되었습니다.');
+                    location.href = '/room_adv.html';
+                } else {
+                    const err = await res.json();
+                    alert('오류: ' + (err.error || '알 수 없는 오류'));
+                    btn.disabled = false;
+                    btn.textContent = '등록 완료';
+                }
+            } catch (err) {
+                console.error(err);
+                alert('서버 통신 오류');
+                btn.disabled = false;
+                btn.textContent = '등록 완료';
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>물건 내놓기 - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 70px;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.25rem;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .container {
+            width: 100%;
+            margin: 0;
+            padding: 1.5rem;
+            box-sizing: border-box;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.8rem;
+            color: white;
+            font-size: 1rem;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .photo-upload-group {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1rem;
+            border-radius: 1rem;
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+        }
+
+        .photo-preview-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        .photo-preview-item {
+            width: 80px;
+            height: 80px;
+            border-radius: 0.6rem;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .photo-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .remove-photo {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2.5rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 1rem;
+            border-radius: 0.8rem;
+            border: none;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .btn-submit {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .anon-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 0.8rem;
+            border-radius: 0.8rem;
+        }
+
+        .price-notice {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0.4rem;
+        }
+    </style>
+</head>
+
+<body class="has-back-button">
+    <!-- Navbar -->
+    <div class="page-header">
+        <h1>물건 내놓기</h1>
+    </div>
+
+    <div class="container" style="padding-top: 2rem;">
+
+        <div id="building-wrapper" style="display:none;">
+            <input type="hidden" id="item-building" value="">
+        </div>
+
+        <div class="form-group">
+            <label>광고 제목 (리스트에 표시될 제목)</label>
+            <input type="text" id="item-ad-title" class="form-input" placeholder="예: [깨끗함] 중고 의자 나눔합니다">
+        </div>
+
+
+        <div class="form-group">
+            <label>광고 범위</label>
+            <select id="item-target" class="form-input">
+                <option value="">전체공고 (모두에게 보임)</option>
+            </select>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 2rem 0;">
+
+        <div class="form-group">
+            <label>물건 이름</label>
+            <input type="text" id="item-name" class="form-input" placeholder="물건의 정확한 이름">
+        </div>
+
+        <div class="form-group">
+            <label>물건 설명</label>
+            <textarea id="item-desc" class="form-input" rows="6" placeholder="상세 설명을 입력해주세요 (사용감, 거래 장소 등)"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>사진 첨부 (최대 5장)</label>
+            <div class="photo-upload-group">
+                <button class="btn btn-cancel"
+                    style="padding:0.6rem 1rem; font-size:0.9rem; margin-bottom:0.5rem; width: auto; flex: none;"
+                    onclick="document.getElementById('photo-input').click()">사진 추가</button>
+                <input type="file" id="photo-input" multiple accept="image/*" style="display:none"
+                    onchange="handleFileSelect(this)">
+                <div id="photo-preview" class="photo-preview-list"></div>
+            </div>
+            <div class="form-group" style="margin-top: 2rem;">
+                <div
+                    style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #fca5a5; padding: 1rem; border-radius: 0.8rem; font-size: 0.9rem; text-align: center;">
+                    📣 사용 후 반환해주세요. 임의로 폐기하시면 안되요
+                </div>
+            </div>
+
+            <div class="action-btns">
+                <button class="btn btn-cancel" onclick="history.back()">취소</button>
+                <button class="btn btn-submit" id="btn-save" onclick="submitItem()">등록하기</button>
+            </div>
+        </div>
+
+        <script src="/js/common.js"></script>
+        <script>
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user) location.href = '/index.html';
+
+            let selectedFiles = [];
+
+            document.addEventListener('DOMContentLoaded', () => {
+                renderNavbar();
+                initForm();
+            });
+
+            async function initForm() {
+                try {
+                    let url = '';
+                    if (user.role === 'admin') url = '/api/admin/buildings';
+                    else if (user.role === 'landlord') url = `/api/landlord/${user.id}/buildings`;
+                    else if (user.role === 'tenant') url = `/api/tenant/${user.id}/buildings`;
+                    else url = '/api/admin/buildings';
+
+                    const res = await fetch(url);
+                    const buildings = await res.json();
+
+                    const bWrapper = document.getElementById('building-wrapper');
+                    const tSelect = document.getElementById('item-target');
+
+                    if (user.role === 'tenant') {
+                        const b = buildings[0] || { id: '', name: '소속 없음' };
+                        bWrapper.innerHTML = `
+                        <input type="text" class="form-input" value="${b.name}" disabled>
+                        <input type="hidden" id="item-building" value="${b.id}">
+                    `;
+                    } else {
+                        document.getElementById('item-building').value = buildings[0] ? buildings[0].id : '';
+                    }
+
+                    tSelect.innerHTML = '<option value="">전체공고 (모두에게 보임)</option>';
+                    buildings.forEach(b => tSelect.innerHTML += `<option value="${b.id}">${b.name} 전용</option>`);
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+
+            function handleFileSelect(input) {
+                const files = Array.from(input.files);
+                if (selectedFiles.length + files.length > 5) {
+                    alert('사진은 최대 5장까지 등록 가능합니다.');
+                    return;
+                }
+                selectedFiles = [...selectedFiles, ...files];
+                renderPreviews();
+            }
+
+            function renderPreviews() {
+                const list = document.getElementById('photo-preview');
+                list.innerHTML = '';
+                selectedFiles.forEach((file, idx) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const item = document.createElement('div');
+                        item.className = 'photo-preview-item';
+                        item.innerHTML = `
+                        <img src="${e.target.result}">
+                        <div class="remove-photo" onclick="removePhoto(${idx})">×</div>
+                    `;
+                        list.appendChild(item);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            function removePhoto(idx) {
+                selectedFiles.splice(idx, 1);
+                renderPreviews();
+            }
+
+            async function submitItem() {
+                const buildingId = document.getElementById('item-building').value;
+                const adTitle = document.getElementById('item-ad-title').value.trim();
+                const itemName = document.getElementById('item-name').value.trim();
+                const itemDesc = document.getElementById('item-desc').value.trim();
+                const isAnon = false;
+                const targetId = document.getElementById('item-target').value;
+                const price = 0;
+
+                if (!buildingId) return alert('건물을 선택해주세요.');
+                if (!adTitle) return alert('광고 제목을 입력해주세요.');
+                if (!itemName) return alert('물건 이름을 입력해주세요.');
+
+                const btn = document.getElementById('btn-save');
+                btn.disabled = true;
+                btn.textContent = '등록 중...';
+
+                const formData = new FormData();
+                formData.append('type', 'item');
+                formData.append('building_id', buildingId);
+                formData.append('title', adTitle);
+                formData.append('item_name', itemName);
+                formData.append('price', price || 0);
+                formData.append('description', itemDesc);
+                formData.append('is_anonymous', isAnon);
+                formData.append('target_id', targetId);
+                formData.append('created_by', user.id);
+
+                selectedFiles.forEach(file => formData.append('photos', file));
+
+                try {
+                    const res = await fetch('/api/postings', { method: 'POST', body: formData });
+                    if (res.ok) {
+                        alert('등록되었습니다.');
+                        location.href = '/item_adv.html';
+                    } else {
+                        const err = await res.json();
+                        alert('등록 실패: ' + (err.error || '알 수 없는 오류'));
+                        btn.disabled = false;
+                        btn.textContent = '등록하기';
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('통신 오류 발생');
+                    btn.disabled = false;
+                    btn.textContent = '등록하기';
+                }
+            }
+        </script>
+</body>
+
+</html>

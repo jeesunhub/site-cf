@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이용약관 - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #layout-main {
+            flex: 1;
+            padding: 2rem 1.5rem;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .terms-header {
+            margin-bottom: 2.5rem;
+            text-align: center;
+        }
+
+        .terms-header h1 {
+            font-size: 2rem;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .terms-header p {
+            opacity: 0.5;
+            font-size: 0.9rem;
+        }
+
+        .terms-content {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            line-height: 1.8;
+            color: #cbd5e1;
+        }
+
+        .terms-section {
+            margin-bottom: 2rem;
+        }
+
+        .terms-section h2 {
+            font-size: 1.1rem;
+            color: #f8fafc;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .terms-section h2::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 1.2rem;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        .terms-section p {
+            font-size: 0.95rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            transition: color 0.2s;
+        }
+
+        .back-btn:hover {
+            color: white;
+        }
+
+        .footer-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        #layout-footer {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(15, 23, 42, 0.9);
+            margin-top: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <main id="layout-main">
+        <a href="javascript:history.back()" class="back-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6" />
+            </svg>
+            뒤로가기
+        </a>
+
+        <div class="terms-header">
+            <h1>이용약관</h1>
+            <p>시행일: 2024년 1월 1일</p>
+        </div>
+
+        <div class="terms-content">
+            <div class="terms-section">
+                <h2>제 1 조 (목적)</h2>
+                <p>본 약관은 Sugar(이하 "회사")가 제공하는 서비스의 이용조건 및 절차, 회사와 회원 간의 권리, 의무 및 책임사항 등을 규정함을 목적으로 합니다.</p>
+            </div>
+
+            <div class="terms-section">
+                <h2>제 2 조 (용어의 정의)</h2>
+                <p>1. "서비스"라 함은 회사가 제공하는 방 내놓기, 물건 공유, 정보 공유 등 일체의 서비스를 의미합니다.</p>
+                <p>2. "회원"이라 함은 회사의 서비스에 접속하여 본 약관에 따라 회사와 이용계약을 체결하고 회사가 제공하는 서비스를 이용하는 고객을 말합니다.</p>
+            </div>
+
+            <div class="terms-section">
+                <h2>제 3 조 (약관의 명시와 개정)</h2>
+                <p>회사는 본 약관의 내용을 회원이 쉽게 알 수 있도록 서비스 초기 화면에 게시합니다. 회사는 관련 법령을 위배하지 않는 범위에서 본 약관을 개정할 수 있습니다.</p>
+            </div>
+
+            <div class="terms-section">
+                <h2>제 4 조 (서비스의 제공 및 변경)</h2>
+                <p>회사는 회원에게 다음과 같은 서비스를 제공합니다.</p>
+                <p>- 부동산 임대 정보 공유 서비스</p>
+                <p>- 중고 물품 나눔 및 거래 서비스</p>
+                <p>- 지역 커뮤니티 정보 공유 서비스</p>
+            </div>
+
+            <div class="terms-section">
+                <h2>제 5 조 (회원의 의무)</h2>
+                <p>회원은 관련 법령, 본 약관의 규정, 이용안내 및 서비스와 관련하여 공지한 주의사항 등을 준수하여야 하며, 기타 회사의 업무에 방해되는 행위를 하여서는 안 됩니다.</p>
+            </div>
+        </div>
+    </main>
+
+    <footer id="layout-footer">
+        <div class="footer-container">
+            <div class="footer-biz-name">상호명: 김지선, 김세미 부동산</div>
+            <div class="footer-links">
+                <a href="/terms.html" class="footer-btn" style="text-decoration:none; opacity:0.8;">이용약관</a>
+                <a href="/privacy.html" class="footer-btn" style="text-decoration:none;">개인정보처리방침</a>
+            </div>
+        </div>
+    </footer>
+</body>
+
+</html>

@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>가입 신청 - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/js/common.js"></script>
+    <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        #layout-main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            width: 100%;
+        }
+
+        .signup-card {
+            width: 100%;
+            max-width: 500px;
+            /* background, border, shadow removed */
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border-radius: 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+            color: white;
+            box-sizing: border-box;
+            outline: none;
+            transition: all 0.3s;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            height: 3rem;
+            display: block;
+        }
+
+        /* Ensure password dots match placeholder height */
+        input[type="password"] {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .form-group input:focus {
+            border-color: #6366f1;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Fix for autofill white background */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0px 1000px #1e293b inset !important;
+            -webkit-text-fill-color: white !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+
+        .password-hint {
+            font-size: 0.75rem;
+            opacity: 0.5;
+            margin-top: 0.3rem;
+        }
+
+        .consent-box {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 0.8rem;
+            font-size: 0.8rem;
+            height: 100px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .checkbox-group input {
+            width: auto;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .submit-btn {
+            flex: 2;
+            height: 3rem;
+            padding: 0 1rem;
+            border-radius: 0.8rem;
+            border: none;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cancel-btn {
+            flex: 1;
+            height: 3rem;
+            padding: 0 1rem;
+            border-radius: 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .submit-btn:hover,
+        .cancel-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .submit-btn:hover {
+            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4);
+        }
+
+        .cancel-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Select Styles */
+        .form-group select {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border-radius: 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+            color: white;
+            box-sizing: border-box;
+            outline: none;
+            transition: all 0.3s;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            height: 3rem;
+            display: block;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        .form-group select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .form-group select:focus {
+            border-color: #6366f1;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .form-group select option {
+            background: #1e293b;
+            color: white;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            padding: 2.5rem 1rem;
+            border-radius: 1.5rem;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .modal-text {
+            font-size: 0.95rem;
+            opacity: 0.8;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .modal-btns {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 0.7rem 1.5rem;
+            border-radius: 0.6rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .btn-confirm {
+            background: #6366f1;
+            color: white;
+        }
+
+        /* Wheel Picker Styles */
+        .wheel-picker-container {
+            display: flex;
+            gap: 0.5rem;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        .wheel {
+            flex: 1;
+            height: 100%;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scrollbar-width: none;
+            /* Firefox */
+            -ms-overflow-style: none;
+            /* IE and Edge */
+            padding: 40px 0;
+            text-align: center;
+        }
+
+        .wheel::-webkit-scrollbar {
+            display: none;
+            /* Chrome, Safari, Opera */
+        }
+
+        .wheel div {
+            height: 40px;
+            line-height: 40px;
+            scroll-snap-align: center;
+            font-size: 1rem;
+            opacity: 0.3;
+            transition: all 0.2s;
+        }
+
+        .wheel div.selected {
+            opacity: 1;
+            font-weight: 600;
+            color: #6366f1;
+            transform: scale(1.1);
+        }
+
+        .wheel-highlight {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 40px;
+            transform: translateY(-50%);
+            border-top: 1px solid rgba(99, 102, 241, 0.3);
+            border-bottom: 1px solid rgba(99, 102, 241, 0.3);
+            pointer-events: none;
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .error-msg {
+            color: #ef4444;
+            font-size: 0.85rem;
+            margin-top: 0.3rem;
+            display: none;
+        }
+
+        .kakao-btn-container {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .kakao-btn {
+            background: #FEE500;
+            color: #000000;
+            border: none;
+            border-radius: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            height: 3rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            font-family: 'Outfit', sans-serif;
+            transition: all 0.2s;
+        }
+
+        .kakao-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .kakao-hint {
+            font-size: 0.8rem;
+            opacity: 0.6;
+            margin-top: 0.6rem;
+        }
+
+        input[readonly] {
+            opacity: 0.7;
+            cursor: not-allowed;
+            background: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .wheel-picker-container.readonly {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+
+<body>
+    <main id="layout-main">
+        <div class="signup-card">
+            <h1 id="page-title">가입 신청</h1>
+
+            <div id="kakao-section" class="kakao-btn-container">
+                <button onclick="loginWithKakao()" class="kakao-btn">
+                    <img src="https://developers.kakao.com/assets/img/about/logos/kakaotalksharing/kakaotalk_sharing_btn_small.png"
+                        width="24" height="24" alt="" />
+                    카카오로 인증
+                </button>
+                <p class="kakao-hint">인증 시 이름, 생년월일, 연락처가 자동 입력됩니다.</p>
+                <div id="test-mode-section"
+                    style="display:none; margin-top: 1rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 1rem;">
+                    <button onclick="generateRandomTenant()" class="cancel-btn"
+                        style="width: 100%; flex: none; background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.2); color: var(--accent);">
+                        🎲 세입자 랜덤 생성 (TEST)
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>아이디(필수)</label>
+                <input type="text" id="login_id" placeholder="아이디를 입력하세요">
+            </div>
+
+            <div class="form-group">
+                <label>비밀번호(필수)</label>
+                <input type="password" id="password" placeholder="비밀번호를 입력하세요">
+                <div class="password-hint">숫자, 영문 대소문자 포함 8~12자리</div>
+            </div>
+
+            <div class="form-group">
+                <label>비밀번호 확인</label>
+                <input type="password" id="password_confirm" placeholder="비밀번호를 다시 입력하세요">
+            </div>
+
+            <div class="form-group">
+                <label>이름(필수)</label>
+                <input type="text" id="name" placeholder="이름을 입력하세요 (카카오 인증 시 자동 입력)" readonly>
+            </div>
+
+            <div class="form-group">
+                <label>생년월일(필수)</label>
+                <input type="text" id="birth_date" placeholder="YYYY-MM-DD (카카오 인증 시 자동 입력)" readonly>
+            </div>
+
+            <div class="form-group">
+                <label>전화번호(필수)</label>
+                <input type="tel" id="phone_number" placeholder="연락처를 입력하세요 (카카오 인증 시 자동 입력)" readonly>
+            </div>
+
+            <div class="form-group" id="building-group" style="display: none;">
+                <label>임대 건물 정보</label>
+                <select id="building_id" disabled onchange="handleBuildingChange()">
+                    <option value="">카카오 인증 후 선택 가능합니다</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="room-group" style="display: none;">
+                <label>방 호수</label>
+                <select id="room_number" disabled>
+                    <option value="">건물을 먼저 선택해주세요</option>
+                </select>
+            </div>
+
+            <div class="consent-box">
+                [개인정보 수집 및 이용 동의]<br><br>
+                1. 수집항목: 이름(필수), 출생연도(필수), 생일(필수), 전화번호(필수), 아이디(필수), 비밀번호(필수)<br>
+                2. 이용목적: 서비스 이용자 식별 및 계약 관리, 알람 발송<br>
+                3. 보유기간: 회원 탈퇴 시 즉시 파기 (단, 법령에 의거 보존 필요 시 해당 기간 동안 보관)<br>
+                4. 동의 거부 시 서비스 이용이 제한될 수 있습니다.
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="consent">
+                <label for="consent">개인정보 수집 및 이용에 동의합니다.</label>
+            </div>
+
+            <div class="btn-group">
+                <button class="cancel-btn" onclick="location.href='/index.html'">취소</button>
+                <button class="submit-btn" onclick="handleSignUp()">가입 신청</button>
+            </div>
+        </div>
+    </main>
+
+    <footer id="layout-footer">
+        <div class="footer-container" style="flex-wrap: wrap;">
+            <div class="footer-biz-name" onclick="toggleFooterInfo()">상호명: 김지선, 김세미 부동산</div>
+            <div class="footer-links">
+                <a href="/terms.html" class="footer-btn" style="text-decoration: none;">이용약관</a>
+                <a href="/privacy.html" class="footer-btn" style="text-decoration: none;">개인정보처리방침</a>
+            </div>
+            <div id="footer-biz-details" class="footer-info-details">
+                상호명: 김지선, 김세미 부동산<br>
+                대표자명: 김지선외 1명<br>
+                사업자등록번호: 640-31-00762<br>
+                주소: 경기도 수원시 팔달구 우만동 89-5 GS지에스타워 403호
+            </div>
+        </div>
+    </footer>
+
+    <!-- Alert Modal -->
+    <div id="alert-modal" class="modal-overlay" onclick="if(event.target === this) closeModal()">
+        <div class="modal-content">
+            <div class="modal-title" id="alert-title">알림</div>
+            <div class="modal-text" id="alert-text">메시지 내용이 표시됩니다.</div>
+            <div class="modal-btns">
+                <button class="modal-btn btn-confirm" onclick="closeModal()">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="modal-overlay" onclick="if(event.target === this) closeConfirmModal()">
+        <div class="modal-content">
+            <div class="modal-title">가입 신청 확인</div>
+            <div class="modal-text">계약서 확인 및 임대인 승인 후 가입이 완료됩니다.<br>입력하신 정보로 가입 신청하시겠습니까?</div>
+            <div class="modal-btns">
+                <button class="modal-btn btn-cancel" onclick="closeConfirmModal()">다시 수정</button>
+                <button class="modal-btn btn-confirm" onclick="submitSignUp()">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const role = urlParams.get('role') || 'tenant';
+
+        document.getElementById('page-title').textContent = (role === 'landlord' ? '임대인' : '세입자') + ' 가입 신청';
+
+        if (role === 'tenant') {
+            document.getElementById('building-group').style.display = 'block';
+            document.getElementById('room-group').style.display = 'block';
+        }
+
+        async function loadBuildings() {
+            try {
+                const res = await fetch('/api/admin/buildings');
+                const buildings = await res.json();
+                const select = document.getElementById('building_id');
+                select.innerHTML = '<option value="">건물을 선택해주세요</option>';
+                buildings.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.id;
+                    opt.textContent = b.name;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                console.error('Failed to load buildings:', err);
+            }
+        }
+
+        async function handleBuildingChange() {
+            const buildingId = document.getElementById('building_id').value;
+            const roomSelect = document.getElementById('room_number');
+
+            if (!buildingId) {
+                roomSelect.innerHTML = '<option value="">건물을 먼저 선택해주세요</option>';
+                roomSelect.disabled = true;
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/buildings/${buildingId}/rooms`);
+                const rooms = await res.json();
+                roomSelect.innerHTML = '<option value="">호수를 선택해주세요</option>';
+                rooms.forEach(r => {
+                    if (r.room_number !== '0') {
+                        const opt = document.createElement('option');
+                        opt.value = r.id; // Store room_id
+                        opt.textContent = r.room_number + '호';
+                        roomSelect.appendChild(opt);
+                    }
+                });
+                roomSelect.disabled = false;
+            } catch (err) {
+                console.error('Failed to load rooms:', err);
+                alert('방 정보를 불러오는데 실패했습니다.');
+            }
+        }
+
+        async function initKakao() {
+            let retries = 0;
+            while (!window.Kakao && retries < 20) {
+                await new Promise(r => setTimeout(r, 100));
+                retries++;
+            }
+
+            if (!window.Kakao) return;
+
+            try {
+                const res = await fetch('/api/config/kakao');
+                if (!res.ok) throw new Error('Failed to fetch config');
+                const data = await res.json();
+
+                if (data.kakaoKey) {
+                    if (!Kakao.isInitialized()) {
+                        Kakao.init(data.kakaoKey);
+                    }
+                }
+            } catch (err) {
+                console.error('Kakao Init Error:', err);
+            }
+        }
+        initKakao();
+
+        async function checkTestMode() {
+            try {
+                const res = await fetch('/api/config/mode');
+                const data = await res.json();
+                if (data.mode === 'TEST') {
+                    document.getElementById('test-mode-section').style.display = 'block';
+                }
+            } catch (err) {
+                console.error('Failed to check mode:', err);
+            }
+        }
+        checkTestMode();
+
+        function generateRandomTenant() {
+            const lastNames = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '한', '오', '서', '신', '권', '황', '안', '송', '전', '홍'];
+            const firstNames = ['민준', '서준', '도윤', '예준', '시우', '하준', '주원', '지호', '지후', '준서', '서윤', '서연', '지우', '하윤', '하은', '민서', '지유', '윤서', '지민', '채원'];
+
+            const randomName = lastNames[Math.floor(Math.random() * lastNames.length)] + firstNames[Math.floor(Math.random() * firstNames.length)];
+
+            // Random birth date (Age 20 ~ 50)
+            const year = 2026 - (20 + Math.floor(Math.random() * 30));
+            const month = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');
+            const day = String(1 + Math.floor(Math.random() * 28)).padStart(2, '0');
+            const randomBirth = `${year}-${month}-${day}`;
+
+            // Random phone
+            const p2 = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+            const p3 = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+            const randomPhone = `010-${p2}-${p3}`;
+
+            document.getElementById('name').value = randomName;
+            document.getElementById('birth_date').value = randomBirth;
+            document.getElementById('phone_number').value = randomPhone;
+            document.getElementById('consent').checked = true;
+
+            if (role === 'tenant') {
+                loadBuildings();
+                document.getElementById('building_id').disabled = false;
+            }
+
+            alert('랜덤 정보가 생성되었습니다.');
+        }
+
+        function loginWithKakao() {
+            if (!window.Kakao || !Kakao.isInitialized()) {
+                alert('카카오 SDK 초기화 중입니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
+
+            Kakao.Auth.login({
+                success: function (authObj) {
+                    Kakao.API.request({
+                        url: '/v2/user/me',
+                        success: function (res) {
+                            const kakaoAccount = res.kakao_account;
+                            console.log('Kakao Account Data:', kakaoAccount);
+                            if (kakaoAccount) {
+                                let updated = false;
+
+                                // Name
+                                const userName = kakaoAccount.name || (kakaoAccount.profile ? kakaoAccount.profile.nickname : '');
+                                if (userName) {
+                                    document.getElementById('name').value = userName;
+                                    updated = true;
+                                }
+
+                                // Phone
+                                if (kakaoAccount.phone_number) {
+                                    let phoneValue = kakaoAccount.phone_number.replace('+82 ', '0').replace(/[^0-9]/g, '');
+                                    if (phoneValue.startsWith('82')) {
+                                        phoneValue = '0' + phoneValue.substring(2);
+                                    }
+                                    document.getElementById('phone_number').value = formatPhone(phoneValue);
+                                    updated = true;
+                                }
+
+                                // Birth Date
+                                if (kakaoAccount.birthyear && kakaoAccount.birthday) {
+                                    const y = kakaoAccount.birthyear;
+                                    const m = kakaoAccount.birthday.substring(0, 2);
+                                    const d = kakaoAccount.birthday.substring(2, 4);
+                                    document.getElementById('birth_date').value = `${y}-${m}-${d}`;
+                                    updated = true;
+                                } else if (kakaoAccount.birthyear) {
+                                    document.getElementById('birth_date').value = kakaoAccount.birthyear;
+                                    updated = true;
+                                }
+
+                                if (updated) {
+                                    if (role === 'tenant') {
+                                        loadBuildings();
+                                        document.getElementById('building_id').disabled = false;
+                                    }
+                                    alert('카카오 인증 성공! 정보가 입력되었습니다.\n아이디와 비밀번호를 설정해주세요.');
+                                } else {
+                                    alert('카카오 계정에서 정보를 가져오지 못했습니다.');
+                                }
+                            }
+                        },
+                        fail: function (error) {
+                            console.error(error);
+                            alert('사용자 정보를 가져오는데 실패했습니다.');
+                        }
+                    });
+                },
+                fail: function (err) {
+                    console.error(err);
+                    alert('카카오 로그인에 실패했습니다.');
+                }
+            });
+        }
+
+        function showModal(title, text) {
+            document.getElementById('alert-title').textContent = title;
+            document.getElementById('alert-text').textContent = text;
+            document.getElementById('alert-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('alert-modal').style.display = 'none';
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirm-modal').style.display = 'none';
+        }
+
+        // Removed Wheel Picker logic as it's no longer used for birthdate
+
+        document.getElementById('phone_number').addEventListener('input', (e) => {
+            e.target.value = formatPhone(e.target.value);
+        });
+
+        function handleSignUp() {
+            const login_id = document.getElementById('login_id').value.trim();
+            const password = document.getElementById('password').value;
+            const password_confirm = document.getElementById('password_confirm').value;
+            const name = document.getElementById('name').value.trim();
+            const birth_date = document.getElementById('birth_date').value;
+            const phone_number = document.getElementById('phone_number').value.replace(/[^0-9]/g, '');
+            const building_id = document.getElementById('building_id').value;
+            const room_number = document.getElementById('room_number').value;
+            const consent = document.getElementById('consent').checked;
+
+            if (!login_id || !name || !birth_date || !phone_number) {
+                showModal('입력 오류', '모든 필수 항목을 입력해주세요.');
+                return;
+            }
+
+            if (role === 'tenant' && (!building_id || !room_number)) {
+                showModal('정보 선택 필요', '임대 건물과 방 호수를 선택해주세요.');
+                return;
+            }
+
+            // Password complexity: 8-12 chars, numbers, upper, lower
+            const pwRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,12}$/;
+            if (!pwRegex.test(password)) {
+                showModal('비밀번호 조건 미달', '비밀번호는 숫자, 영문 대소문자를 포함하여 8~12자리여야 합니다.');
+                return;
+            }
+
+            if (password !== password_confirm) {
+                showModal('비밀번호 불일치', '비밀번호 확인이 일치하지 않습니다.');
+                return;
+            }
+
+            // Age check (18+)
+            const bdate = new Date(birth_date);
+            const today = new Date();
+            let age = today.getFullYear() - bdate.getFullYear();
+            const m = today.getMonth() - bdate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < bdate.getDate())) {
+                age--;
+            }
+            if (age < 18) {
+                showModal('미성년자 가입 제한', '만 18세 미만은 가입이 제한됩니다.');
+                return;
+            }
+
+            if (!consent) {
+                showModal('동의 필요', '개인정보 수집 및 이용에 동의해주세요.');
+                return;
+            }
+
+            // Show Confirm Modal instead of direct fetch
+            document.getElementById('confirm-modal').style.display = 'flex';
+        }
+
+        async function submitSignUp() {
+            const login_id = document.getElementById('login_id').value.trim();
+            const password = document.getElementById('password').value;
+            const name = document.getElementById('name').value.trim();
+            const birth_date = document.getElementById('birth_date').value;
+            const phone_number = document.getElementById('phone_number').value.replace(/[^0-9]/g, '');
+            const building_id = document.getElementById('building_id').value;
+            const room_number = document.getElementById('room_number').value;
+
+            try {
+                const res = await fetch('/api/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        login_id, password, nickname: name, birth_date, phone_number, role, building_id, room_number
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    alert('가입 신청이 완료되었습니다.');
+                    window.location.href = '/index.html';
+                } else {
+                    closeConfirmModal();
+                    if (data.error === 'USER_EXISTS') {
+                        showModal('동일인 가입 불가', '연락처와 생년월일이 같은 사용자가 이미 존재합니다.');
+                    } else if (data.error === 'ID_EXISTS') {
+                        showModal('중복 아이디', '이미 사용 중인 아이디입니다.');
+                    } else {
+                        showModal('오류', data.error || '가입 신청 중 오류가 발생했습니다.');
+                    }
+                }
+            } catch (err) {
+                closeConfirmModal();
+                showModal('통신 오류', '서버와 통신할 수 없습니다.');
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Settings - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .system-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .system-info-row:last-child {
+            border-bottom: none;
+        }
+
+        .label {
+            opacity: 0.6;
+            font-size: 0.9rem;
+        }
+
+        .value {
+            font-weight: 600;
+            color: var(--primary);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="main-content">
+        <div class="settings-container">
+            <h1 style="margin-bottom:2rem">시스템 설정</h1>
+
+            <div class="system-info-row">
+                <h2 style="margin: 0; font-size: 1.1rem; color: var(--primary);">표시 정보</h2>
+            </div>
+
+            <div class="system-info-row"
+                style="flex-direction: column; align-items: stretch; gap: 1rem; border-bottom: none;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span class="label">시스템 폰트</span>
+                    <span class="value" id="font-family-value">로딩 중...</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span class="label">기본 폰트 사이즈</span>
+                    <span class="value" id="font-size-value">로딩 중...</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span class="label">애플리케이션 버전</span>
+                    <span class="value">v1.2.0</span>
+                </div>
+            </div>
+            <div id="admin-actions"
+                style="display: none; margin-top: 2rem; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 2rem;">
+                <h2 style="margin-bottom: 1.5rem; color: #ef4444;">관리자 도구</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <button class="btn" style="background: var(--primary); width: 100%;" onclick="exportDatabase()">DB
+                        내보내기</button>
+                    <button class="btn" style="background: #10b981; width: 100%;"
+                        onclick="document.getElementById('import-db-input').click()">DB 가져오기</button>
+                </div>
+                <input type="file" id="import-db-input" style="display: none;" onchange="importDatabase(this)"
+                    accept=".db">
+                <button class="btn" style="background: #ef4444; width: 100%; margin-top: 1rem;"
+                    onclick="resetDatabase()">DB 초기화</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderNavbar();
+            displaySystemInfo();
+            setupAdminView();
+        });
+
+        function setupAdminView() {
+            if (user && user.role === 'admin') {
+                document.getElementById('admin-actions').style.display = 'block';
+            }
+        }
+
+        async function resetDatabase() {
+            if (!confirm('경고: 모든 데이터가 삭제되고 데이터베이스가 초기화됩니다.\n계속하시겠습니까?')) return;
+
+            try {
+                const res = await fetch('/api/admin/reset-db', {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert('데이터베이스가 성공적으로 초기화되었습니다.\n관리자 계정(admin/admin)으로 다시 로그인해 주세요.');
+                    localStorage.removeItem('user');
+                    window.location.href = '/index.html';
+                } else {
+                    alert('초기화 실패: ' + data.error);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('서버 오류 발생');
+            }
+        }
+
+        async function exportDatabase() {
+            try {
+                const res = await fetch('/api/admin/export-db');
+                if (!res.ok) throw new Error('백업 실패');
+
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `sugar_backup_${new Date().toISOString().slice(0, 10)}.db`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (err) {
+                console.error(err);
+                alert('DB 내보내기 중 오류가 발생했습니다.');
+            }
+        }
+
+        async function importDatabase(input) {
+            if (!input.files || input.files.length === 0) return;
+            const file = input.files[0];
+
+            if (!confirm('경고: 가져오기 시 현재 데이터베이스가 업로드한 파일로 완전히 교체됩니다.\n기존 데이터는 복구할 수 없습니다. 계속하시겠습니까?')) {
+                input.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('db_file', file);
+
+            try {
+                const res = await fetch('/api/admin/import-db', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    alert('데이터베이스를 성공적으로 가져왔습니다.\n시스템 반영을 위해 페이지를 새로고침합니다.');
+                    location.reload();
+                } else {
+                    alert('가져오기 실패: ' + data.error);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('서버 오류 발생');
+            } finally {
+                input.value = '';
+            }
+        }
+
+        function displaySystemInfo() {
+            const bodyStyle = window.getComputedStyle(document.body);
+
+            const fontFamily = bodyStyle.fontFamily;
+            const fontSize = bodyStyle.fontSize;
+
+            document.getElementById('font-family-value').textContent = fontFamily;
+            document.getElementById('font-size-value').textContent = fontSize;
+        }
+    </script>
+</body>
+
+</html>

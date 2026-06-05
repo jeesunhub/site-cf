@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정보 상세 - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .detail-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem 1.5rem;
+            background: #1e293b;
+            min-height: calc(100vh - 3.5rem);
+        }
+
+        .header-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .back-btn {
+            color: #94a3b8;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header-section h1 {
+            font-size: 1.25rem;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .detail-meta-box {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 1.2rem;
+            border-radius: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .meta-label {
+            color: #94a3b8;
+        }
+
+        .meta-value {
+            color: #f8fafc;
+            font-weight: 500;
+        }
+
+        .memo-box {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1.2rem;
+            border-radius: 1rem;
+            color: #e2e8f0;
+            font-size: 1rem;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            min-height: 10rem;
+        }
+
+        .photo-gallery {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 15px;
+            margin-top: 1rem;
+            scrollbar-width: thin;
+        }
+
+        .photo-gallery img {
+            height: 300px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 0.8rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 1rem;
+            border-radius: 0.8rem;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-outline {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #image-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            cursor: zoom-out;
+        }
+
+        #image-overlay img {
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.6rem;
+            color: white;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="detail-container">
+        <div class="header-section">
+            <div class="back-btn" onclick="history.back()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m15 18-6-6 6-6" />
+                </svg>
+            </div>
+            <h1 id="page-title">정보 상세</h1>
+        </div>
+
+        <div id="view-mode">
+            <div class="form-group">
+                <label>정보 제목</label>
+                <div id="view-title" style="font-size:1.5rem; font-weight:600; color:white; padding:0.5rem 0;"></div>
+            </div>
+
+            <div class="form-group">
+                <label>상세 내용</label>
+                <div id="view-desc" class="memo-box"></div>
+            </div>
+
+            <div class="form-group" id="photo-section" style="display:none;">
+                <label>참고 사진</label>
+                <div id="view-photos" class="photo-gallery"></div>
+            </div>
+
+            <div
+                style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: flex-end; font-size: 0.85rem; color: #94a3b8;">
+                <span>등록일: </span>
+                <span id="view-date" style="margin-left: 0.5rem;">-</span>
+            </div>
+
+            <div class="action-btns" id="admin-btns" style="display:none;">
+                <button class="btn btn-outline" onclick="toggleEditMode()">수정하기</button>
+                <button class="btn btn-danger" onclick="deleteAd()">삭제하기</button>
+            </div>
+
+            <!-- Hidden Meta Box (Previously used for category, building, author) -->
+            <div id="hidden-meta" style="display:none;">
+                <span id="view-category"></span>
+                <span id="view-building"></span>
+                <span id="view-owner"></span>
+            </div>
+        </div>
+
+        <div id="edit-mode" style="display:none;">
+            <div class="form-group">
+                <label>건물</label>
+                <select id="edit-building" class="form-input"></select>
+            </div>
+
+            <div class="form-group">
+                <label>정보 분류</label>
+                <select id="edit-category" class="form-input"></select>
+            </div>
+
+            <div class="form-group">
+                <label>정보 제목</label>
+                <input type="text" id="edit-title" class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label>상세 내용</label>
+                <textarea id="edit-desc" class="form-input" rows="8"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>익명 공유</label>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <input type="checkbox" id="edit-anon" style="width:auto; cursor:pointer;">
+                    <label for="edit-anon" style="margin:0; cursor:pointer; color:#ccc;">익명으로 표시하기</label>
+                </div>
+            </div>
+
+            <div class="action-btns">
+                <button class="btn btn-outline" onclick="toggleEditMode()">취소</button>
+                <button class="btn btn-primary" onclick="saveAd()">저장하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Overlay -->
+    <div id="image-overlay" onclick="this.style.display='none'">
+        <img id="overlay-img" src="">
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+        const adId = new URLSearchParams(window.location.search).get('id');
+        let currentAd = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof renderNavbar === 'function') renderNavbar();
+            if (!adId) {
+                alert('잘못된 접근입니다.');
+                history.back();
+                return;
+            }
+            loadAdDetail();
+        });
+
+        async function loadAdDetail() {
+            try {
+                const res = await fetch(`/api/postings/${adId}`);
+                if (!res.ok) {
+                    const error = await res.json().catch(() => ({}));
+                    throw new Error(error.error || `정보를 불러올 수 없습니다. (상태: ${res.status})`);
+                }
+                currentAd = await res.json();
+
+                renderViewMode();
+
+                if (user) {
+                    const isMine = currentAd.created_by === user.id;
+                    const isAdmin = user.role === 'admin';
+                    const isRealEstate = currentAd.category === '친절한 부동산';
+
+                    const canEditDelete = isRealEstate ? isAdmin : (isMine || isAdmin);
+
+                    if (canEditDelete) {
+                        document.getElementById('admin-btns').style.display = 'flex';
+                    }
+                }
+            } catch (err) {
+                console.error('Detail Load Error:', err);
+                alert(err.message);
+                // history.back(); // Temporarily comment out to allow seeing error if needed, or keep for UX
+            }
+        }
+
+        function renderViewMode() {
+            document.getElementById('view-category').textContent = currentAd.category || '기타';
+            document.getElementById('view-building').textContent = currentAd.building_name || '전체';
+            document.getElementById('view-owner').textContent = currentAd.is_anonymous ? '익명' : (currentAd.owner_login_id || '알 수 없음');
+            document.getElementById('view-date').textContent = currentAd.created_at ? currentAd.created_at.split(' ')[0] : '-';
+            document.getElementById('view-title').textContent = currentAd.title;
+            document.getElementById('view-desc').textContent = currentAd.description;
+
+            const photoSection = document.getElementById('photo-section');
+            const photoList = document.getElementById('view-photos');
+            photoList.innerHTML = '';
+
+            if (currentAd.images && currentAd.images.length > 0) {
+                photoSection.style.display = 'block';
+                currentAd.images.forEach(img => {
+                    const imgEl = document.createElement('img');
+                    imgEl.src = img.image_url;
+                    imgEl.onclick = () => showLargeImage(img.image_url);
+                    photoList.appendChild(imgEl);
+                });
+            } else {
+                photoSection.style.display = 'none';
+            }
+        }
+
+        function showLargeImage(url) {
+            document.getElementById('overlay-img').src = url;
+            document.getElementById('image-overlay').style.display = 'flex';
+        }
+
+        function toggleEditMode() {
+            const v = document.getElementById('view-mode');
+            const e = document.getElementById('edit-mode');
+
+            if (e.style.display === 'none') {
+                v.style.display = 'none';
+                e.style.display = 'block';
+                document.getElementById('page-title').textContent = '정보 수정';
+                prepareEditMode();
+            } else {
+                v.style.display = 'block';
+                e.style.display = 'none';
+                document.getElementById('page-title').textContent = '정보 상세';
+            }
+        }
+
+        async function prepareEditMode() {
+            if (!user) return;
+            // Populate categories
+            const categorySelect = document.getElementById('edit-category');
+            categorySelect.innerHTML = `
+                <option value="직접 가본 맛집">직접 가본 맛집</option>
+                <option value="추천할 장소">추천할 장소</option>
+                <option value="공유 할 할인 정보">공유 할 할인 정보</option>
+                <option value="기타 정보">기타 정보</option>
+                ${user.role === 'admin' ? '<option value="친절한 부동산">친절한 부동산</option>' : ''}
+            `;
+            categorySelect.value = currentAd.category;
+
+            // Populate buildings
+            const buildingSelect = document.getElementById('edit-building');
+            try {
+                let url = user.role === 'admin' ? '/api/admin/buildings' : `/api/landlord/${user.id}/buildings`;
+                if (user.role === 'tenant') url = `/api/tenant/${user.id}/buildings`;
+
+                const res = await fetch(url);
+                const buildings = await res.json();
+
+                buildingSelect.innerHTML = '<option value="">전체</option>';
+                buildings.forEach(b => {
+                    buildingSelect.innerHTML += `<option value="${b.id}">${b.name}</option>`;
+                });
+                buildingSelect.value = currentAd.building_id || '';
+            } catch (err) { }
+
+            document.getElementById('edit-title').value = currentAd.title;
+            document.getElementById('edit-desc').value = currentAd.description;
+            document.getElementById('edit-anon').checked = !!currentAd.is_anonymous;
+        }
+
+        async function saveAd() {
+            if (!user) return;
+            const title = document.getElementById('edit-title').value.trim();
+            const desc = document.getElementById('edit-desc').value.trim();
+            if (!title || !desc) return alert('제목과 내용을 입력해주세요.');
+
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('description', desc);
+            formData.append('category', document.getElementById('edit-category').value);
+            formData.append('building_id', document.getElementById('edit-building').value);
+            formData.append('is_anonymous', document.getElementById('edit-anon').checked);
+            formData.append('type', 'info');
+
+            try {
+                const res = await fetch(`/api/postings/${adId}`, {
+                    method: 'PUT',
+                    body: formData
+                });
+                if (res.ok) {
+                    alert('수정되었습니다.');
+                    location.reload();
+                } else {
+                    alert('수정 실패');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('통신 오류');
+            }
+        }
+
+        async function deleteAd() {
+            if (!user) return;
+            if (!confirm('정말로 삭제하시겠습니까?')) return;
+            try {
+                const res = await fetch(`/api/postings/${adId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    alert('삭제되었습니다.');
+                    history.back();
+                } else {
+                    alert('삭제 실패');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>개인정보처리방침 - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #layout-main {
+            flex: 1;
+            padding: 2rem 1.5rem;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .privacy-header {
+            margin-bottom: 2.5rem;
+            text-align: center;
+        }
+
+        .privacy-header h1 {
+            font-size: 2rem;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .privacy-header p {
+            opacity: 0.5;
+            font-size: 0.9rem;
+        }
+
+        .privacy-content {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            line-height: 1.8;
+            color: #cbd5e1;
+        }
+
+        .privacy-section {
+            margin-bottom: 2rem;
+        }
+
+        .privacy-section h2 {
+            font-size: 1.1rem;
+            color: #f8fafc;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .privacy-section h2::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 1.2rem;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        .privacy-section p {
+            font-size: 0.95rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            transition: color 0.2s;
+        }
+
+        .back-btn:hover {
+            color: white;
+        }
+
+        .footer-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        #layout-footer {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(15, 23, 42, 0.9);
+            margin-top: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <main id="layout-main">
+        <a href="javascript:history.back()" class="back-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6" />
+            </svg>
+            뒤로가기
+        </a>
+
+        <div class="privacy-header">
+            <h1>개인정보처리방침</h1>
+            <p>시행일: 2024년 1월 1일</p>
+        </div>
+
+        <div class="privacy-content">
+            <div class="privacy-section">
+                <h2>제 1 조 (개인정보의 처리 목적)</h2>
+                <p>회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며 이용 목적이 변경되는 경우에는 관련 법령에 따라 별도의
+                    동의를 받는 등 필요한 조치를 이행할 예정입니다.</p>
+                <p>1. 서비스 회원가입 및 관리: 회원 가입의사 확인, 회원제 서비스 제공에 따른 본인 식별·인증, 회원자격 유지·관리, 서비스 부정이용 방지 등</p>
+                <p>2. 서비스 제공: 부동산 정보 제공, 물건 공유 서비스, 커뮤니티 서비스 등 서비스 제공에 관련한 목적으로 개인정보를 처리합니다.</p>
+            </div>
+
+            <div class="privacy-section">
+                <h2>제 2 조 (처리하는 개인정보의 항목)</h2>
+                <p>회사는 다음의 개인정보 항목을 처리하고 있습니다.</p>
+                <p>- 필수항목: 이름, 출생연도, 생일, 전화번호, 아이디, 비밀번호</p>
+                <p>- 선택항목: 프로필 사진, 관심 지역 등</p>
+            </div>
+
+            <div class="privacy-section">
+                <h2>제 3 조 (개인정보의 처리 및 보유 기간)</h2>
+                <p>회사는 법령에 따른 개인정보 보유·이용기간 또는 정보주체로부터 개인정보를 수집 시에 동의 받은 개인정보 보유·이용기간 내에서 개인정보를 처리·보유합니다.</p>
+                <p>각각의 개인정보 처리 및 보유 기간은 회원 탈퇴 시까지입니다. 다만, 관련 법령의 규정에 의하여 보존할 필요가 있는 경우 해당 법령에서 정한 기간 동안 보관합니다.</p>
+            </div>
+
+            <div class="privacy-section">
+                <h2>제 4 조 (정보주체의 권리·의무 및 그 행사방법)</h2>
+                <p>정보주체는 회사에 대해 언제든지 개인정보 열람·정정·삭제·처리정지 요구 등의 권리를 행사할 수 있습니다. 권리 행사는 회사에 대해 서면, 전자우편 등을 통하여 하실 수 있으며 회사는
+                    이에 대해 지체 없이 조치하겠습니다.</p>
+            </div>
+        </div>
+    </main>
+
+    <footer id="layout-footer">
+        <div class="footer-container">
+            <div class="footer-biz-name">상호명: 김지선, 김세미 부동산</div>
+            <div class="footer-links">
+                <a href="/terms.html" class="footer-btn" style="text-decoration:none;">이용약관</a>
+                <a href="/privacy.html" class="footer-btn" style="text-decoration:none; opacity:0.8;">개인정보처리방침</a>
+            </div>
+        </div>
+    </footer>
+</body>
+
+</html>

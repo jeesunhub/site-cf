@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Settings - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        #layout-main {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            flex: 1;
+            text-align: center;
+        }
+
+        .container {
+            padding: 0 1.5rem;
+            max-width: 800px;
+            margin: 2rem auto;
+        }
+
+        /* #main-content ruleset removed to satisfy lint */
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title {
+            margin-bottom: 1.5rem;
+            color: #6366f1;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .form-input {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .btn-save {
+            width: 100%;
+            height: 48px;
+            border-radius: 1rem;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            margin-top: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            transition: all 0.2s;
+        }
+
+        .btn-save:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="main-content">
+        <div class="settings-container">
+
+            <!-- Section 1: My Profile -->
+            <div style="margin-bottom: 2rem;">
+                <h2 class="section-title">내 프로필</h2>
+                <div class="form-group">
+                    <label>아이디 (Login ID)</label>
+                    <input type="text" id="my-login-id" class="form-input">
+                </div>
+                <!-- Password Row (Hidden Value + Change Button) -->
+                <div class="form-group">
+                    <label>비밀번호</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <span style="opacity: 0.5;">********</span>
+                        <button class="btn btn-secondary" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;"
+                            onclick="openChangePasswordModal()">변경</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>닉네임</label>
+                    <input type="text" id="my-nickname" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>프로필 색상</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="color" id="my-color-picker"
+                            style="width: 50px; height: 40px; border: none; padding: 0; background: none; cursor: pointer;">
+                        <input type="text" id="my-color-text" class="form-input" style="width: 120px;"
+                            placeholder="#RRGGBB">
+                    </div>
+                </div>
+                <button class="btn-save" onclick="saveMyProfile()">저장</button>
+            </div>
+
+            <!-- Section 2: Managed Profiles (Admin/Landlord only) -->
+            <div id="managed-profiles-section" style="display: none;">
+                <h2 class="section-title">관리 프로필 목록</h2>
+                <div id="managed-profiles-list" class="settings-list">
+                    <!-- Profiles will be rendered here -->
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+    <!-- Modal: Change Password (Self) -->
+    <div id="change-password-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>비밀번호 변경</h2>
+            </div>
+            <div class="form-group">
+                <label>현재 비밀번호</label>
+                <input type="password" id="cp-current" class="form-input">
+            </div>
+            <div class="form-group">
+                <label>새 비밀번호</label>
+                <input type="password" id="cp-new" class="form-input">
+            </div>
+            <div class="form-group">
+                <label>새 비밀번호 확인</label>
+                <input type="password" id="cp-confirm" class="form-input">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary"
+                    onclick="document.getElementById('change-password-modal').style.display='none'">취소</button>
+                <button class="btn" onclick="submitChangePassword()">완료</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Reset Password (Admin/Landlord for others) -->
+    <div id="reset-password-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>비밀번호 리셋</h2>
+            </div>
+            <p style="margin-bottom: 1rem; opacity: 0.8;">해당 사용자의 비밀번호를 강제로 변경합니다.</p>
+            <div class="form-group">
+                <label>새 비밀번호 입력</label>
+                <input type="text" id="rp-new" class="form-input" placeholder="예: 1111">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary"
+                    onclick="document.getElementById('reset-password-modal').style.display='none'">취소</button>
+                <button class="btn" onclick="submitResetPassword()">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            renderNavbar();
+            loadMyProfile();
+            loadManagedProfiles();
+        });
+
+        const currentUser = JSON.parse(localStorage.getItem('user'));
+        let targetResetUserId = null;
+
+        // --- My Profile Logic ---
+
+        function loadMyProfile() {
+            if (!currentUser) return;
+            document.getElementById('my-login-id').value = currentUser.login_id || '';
+            document.getElementById('my-nickname').value = currentUser.nickname || '';
+            document.getElementById('my-color-picker').value = currentUser.color || '#6366f1';
+            document.getElementById('my-color-text').value = currentUser.color || '#6366f1';
+
+            document.getElementById('my-color-picker').addEventListener('input', (e) => {
+                document.getElementById('my-color-text').value = e.target.value;
+            });
+            document.getElementById('my-color-text').addEventListener('input', (e) => {
+                document.getElementById('my-color-picker').value = e.target.value;
+            });
+        }
+
+        async function saveMyProfile() {
+            const login_id = document.getElementById('my-login-id').value;
+            const nickname = document.getElementById('my-nickname').value;
+            const color = document.getElementById('my-color-text').value;
+
+            if (!login_id || !nickname) {
+                alert('아이디와 닉네임은 필수입니다.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('login_id', login_id);
+            formData.append('nickname', nickname);
+            formData.append('color', color);
+            // Password is NOT updated here anymore
+
+            try {
+                const res = await fetch(`/api/profile/${currentUser.id}`, {
+                    method: 'PUT',
+                    body: formData
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+
+                alert('프로필이 업데이트되었습니다.');
+                localStorage.setItem('user', JSON.stringify(data.user)); // Key fix: Update generic user item
+                window.location.reload();
+            } catch (err) {
+                alert('업데이트 실패: ' + err.message);
+            }
+        }
+
+        function openChangePasswordModal() {
+            document.getElementById('cp-current').value = '';
+            document.getElementById('cp-new').value = '';
+            document.getElementById('cp-confirm').value = '';
+            document.getElementById('change-password-modal').style.display = 'flex';
+        }
+
+        async function submitChangePassword() {
+            const currentPw = document.getElementById('cp-current').value;
+            const newPw = document.getElementById('cp-new').value;
+            const confirmPw = document.getElementById('cp-confirm').value;
+
+            if (!currentPw || !newPw || !confirmPw) {
+                alert('모든 필드를 입력해주세요.');
+                return;
+            }
+            if (newPw !== confirmPw) {
+                alert('새 비밀번호가 일치하지 않습니다.');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: currentUser.id, currentPassword: currentPw, newPassword: newPw })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+
+                alert('비밀번호가 변경되었습니다.');
+                document.getElementById('change-password-modal').style.display = 'none';
+            } catch (err) {
+                alert('비밀번호 변경 실패: ' + err.message);
+            }
+        }
+
+        // --- Managed Profiles Logic ---
+
+        async function loadManagedProfiles() {
+            const container = document.getElementById('managed-profiles-list');
+            const section = document.getElementById('managed-profiles-section');
+            container.innerHTML = '';
+
+            let profiles = [];
+
+            try {
+                if (currentUser.role === 'admin') {
+                    section.style.display = 'block';
+                    const res = await fetch('/api/admin/users'); // Need to implement this in server
+                    profiles = await res.json();
+                    // Admin sees everyone (except maybe themselves in this list? logic says admin sees admin profile too, but "My Profile" is already up top. Let's filter out self to avoid confusion or keep it. Prompt says "admin 자신의 프로필과...". Since section 1 is My Profile, maybe list managed profiles as "Others"?)
+                    // Prompt: "admin 자신의 프로필과 임대인의 프로필들과 세입자들의 프로필이 나옴." 
+                    // This implies a list. But "My Profile" is editable separately.
+                    // Let's list everyone for Admin.
+                } else if (currentUser.role === 'landlord') {
+                    section.style.display = 'block';
+                    const res = await fetch(`/api/landlord/${currentUser.id}/tenants`);
+                    profiles = await res.json();
+                    // Prompt: "임대인 자신의 프로필과 임대인에 소속된 세입자들의 프로필이 나옴"
+                    // We can also fetch the landlord themselves if we want to list them here, but they are already in "My Profile".
+                    // Let's assume this list is for "Other Profiles I can see".
+                } else {
+                    // Tenant: "본인 자신의 프로필만 나옴"
+                    section.style.display = 'none';
+                    return;
+                }
+
+                if (profiles.length === 0) {
+                    container.innerHTML = '<p style="opacity:0.5;">관리할 프로필이 없습니다.</p>';
+                } else {
+                    profiles.forEach(p => {
+                        // Don't show self in the managed list if it's redundant, or show it. 
+                        // If Admin sees everything, showing self allows Admin to "Reset" their own password via reset tool? 
+                        // Usually self-management is preferred. Let's filter out current user from this list to avoid confusion.
+                        if (p.id === currentUser.id) return;
+
+                        const item = document.createElement('div');
+                        item.className = '';
+                        item.style.padding = '1rem 0';
+                        item.style.marginBottom = '0.5rem';
+                        item.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+
+                        let roleBadge = '';
+                        if (p.role === 'admin') roleBadge = '<span style="background:var(--danger); font-size:0.7rem; padding:2px 6px; border-radius:4px; margin-left:5px;">Admin</span>';
+                        else if (p.role === 'landlord') roleBadge = '<span style="background:var(--primary); font-size:0.7rem; padding:2px 6px; border-radius:4px; margin-left:5px;">Landlord</span>';
+                        else roleBadge = '<span style="background:var(--accent); color:black; font-size:0.7rem; padding:2px 6px; border-radius:4px; margin-left:5px;">Tenant</span>';
+
+                        item.innerHTML = `
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <div class="avatar-circle" style="background:${p.color || '#6366f1'}; width:40px; height:40px; font-size:1rem;">
+                                        ${p.nickname ? p.nickname[0] : '?'}
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:600;">${p.nickname} ${roleBadge}</div>
+                                        <div style="font-size:0.8rem; opacity:0.6;">ID: ${p.login_id}</div>
+                                    </div>
+                                </div>
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <span style="font-size:0.8rem; opacity:0.5; margin-right:5px;">비밀번호</span>
+                                    <button class="btn btn-secondary" style="padding:0.3rem 0.8rem; font-size:0.75rem; background:rgba(255,255,255,0.1);" onclick="openResetPasswordModal(${p.id}, '${p.nickname}')">리셋</button>
+                                </div>
+                            </div>
+                        `;
+                        container.appendChild(item);
+                    });
+                }
+
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = '<p style="color:var(--danger);">프로필 목록을 불러오지 못했습니다.</p>';
+            }
+        }
+
+        function openResetPasswordModal(userId, nickname) {
+            targetResetUserId = userId;
+            document.querySelector('#reset-password-modal .modal-header h2').innerText = `${nickname}님 비밀번호 리셋`;
+            document.getElementById('rp-new').value = '';
+            document.getElementById('reset-password-modal').style.display = 'flex';
+        }
+
+        async function submitResetPassword() {
+            const newPw = document.getElementById('rp-new').value;
+            if (!newPw) {
+                alert('새 비밀번호를 입력해주세요.');
+                return;
+            }
+            if (!targetResetUserId) return;
+
+            try {
+                const res = await fetch('/api/auth/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ targetUserId: targetResetUserId, newPassword: newPw })
+                });
+                if (!res.ok) throw new Error('Failed to reset');
+
+                alert('비밀번호가 리셋되었습니다.');
+                document.getElementById('reset-password-modal').style.display = 'none';
+            } catch (err) {
+                alert('리셋 실패: ' + err.message);
+            }
+        }
+
+
+    </script>
+</body>
+
+</html>

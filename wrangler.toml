@@ -1,0 +1,16 @@
+# Cloudflare Pages Configuration
+name = "site-project"
+compatibility_date = "2024-03-22"
+pages_build_output_dir = "public"
+
+# Bindings (Environment Variables)
+# You should set DATABASE_URL in the Cloudflare Dashboard or via wrangler secret
+# [vars]
+# DATABASE_URL = "postgres://..."
+
+# R2 Bucket for Photos
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "site-photos"
+
+# Preview/Production environment specific settings can go here if needed.
