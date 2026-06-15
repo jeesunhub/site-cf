@@ -544,15 +544,22 @@
             currentView = 'landlord';
             const isAdmin = user.role === 'admin';
 
+            try {
             // 1. Fetch Tenants
             const tenantsUrl = isAdmin ? '/api/admin/tenants' : `/api/landlord/${user.id}/tenants`;
             const res = await fetch(tenantsUrl);
+            if (!res.ok) throw new Error(`Tenants API 오류: ${res.status}`);
             const tenants = await res.json();
 
             // 2. Fetch Calendar Data
             const calUrl = isAdmin ? '/api/admin/calendar-data' : `/api/landlord/${user.id}/calendar-data`;
             const calRes = await fetch(calUrl);
-            calendarData = await calRes.json();
+            if (!calRes.ok) {
+                console.error('Calendar API 오류:', calRes.status);
+                calendarData = [];
+            } else {
+                calendarData = await calRes.json();
+            }
 
             // 3. Process Billing Data (Unpaid & Transactions)
             const allBills = [];
@@ -577,6 +584,12 @@
             billingData = sortBillingData(allBills);
 
             renderDashboardUI();
+            } catch (err) {
+                console.error('Dashboard 로드 오류:', err);
+                const container = document.getElementById('main-content');
+                container.innerHTML = `<div class="empty-state">데이터를 불러오는 중 오류가 발생했습니다.<br><small>${err.message}</small></div>`;
+                renderDashboardUI();
+            }
         }
 
         function sortBillingData(data) {
@@ -601,13 +614,30 @@
         async function loadTenantView(tenantId) {
             currentView = 'tenant';
 
+            try {
             const billRes = await fetch(`/api/tenant/${tenantId}/billing`);
-            billingData = sortBillingData(await billRes.json());
+            if (!billRes.ok) {
+                console.error('Billing API 오류:', billRes.status);
+                billingData = [];
+            } else {
+                billingData = sortBillingData(await billRes.json());
+            }
 
             const calRes = await fetch(`/api/tenant/${tenantId}/calendar-data`);
-            calendarData = await calRes.json();
+            if (!calRes.ok) {
+                console.error('Calendar API 오류:', calRes.status);
+                calendarData = [];
+            } else {
+                calendarData = await calRes.json();
+            }
 
             renderDashboardUI();
+            } catch (err) {
+                console.error('Dashboard 로드 오류:', err);
+                const container = document.getElementById('main-content');
+                container.innerHTML = `<div class="empty-state">데이터를 불러오는 중 오류가 발생했습니다.<br><small>${err.message}</small></div>`;
+                renderDashboardUI();
+            }
         }
 
         function renderDashboardUI() {

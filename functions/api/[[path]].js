@@ -18,7 +18,7 @@ let db; // will be initialized
 ;
 
 
-const app = new Hono().basePath('/api');
+const app = new Hono();
 app.use('*', logger());
 app.use('*', cors());
 
