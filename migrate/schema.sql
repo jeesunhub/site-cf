@@ -252,3 +252,53 @@ CREATE TABLE IF NOT EXISTS logs (
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     memo TEXT
 );
+
+-- Open Banking: OAuth 토큰 저장
+CREATE TABLE IF NOT EXISTS bank_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT NOT NULL,
+    token_type TEXT DEFAULT 'Bearer',
+    expires_at DATETIME,
+    scope TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Open Banking: 계좌 등록
+CREATE TABLE IF NOT EXISTS bank_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    bank_code TEXT NOT NULL,
+    bank_name TEXT,
+    account_num TEXT NOT NULL,
+    account_alias TEXT,
+    account_type TEXT DEFAULT 'deposit',
+    is_primary INTEGER DEFAULT 0,
+    sync_interval TEXT DEFAULT 'manual',
+    last_synced_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Open Banking: 자동 동기화된 거래 내역
+CREATE TABLE IF NOT EXISTS bank_transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    account_id INTEGER NOT NULL,
+    tran_date TEXT NOT NULL,
+    tran_time TEXT,
+    tran_type TEXT,
+    amount INTEGER NOT NULL,
+    after_balance INTEGER,
+    memo TEXT,
+    branch_name TEXT,
+    source TEXT DEFAULT 'openbank',
+    is_processed INTEGER DEFAULT 0,
+    payment_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES bank_accounts(id) ON DELETE CASCADE,
+    FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE SET NULL
+);

@@ -1,4 +1,4 @@
-
+ㅈㅐ
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
@@ -5681,6 +5681,590 @@ const server = app.listen(PORT, () => {
     }
 });
 
+
+// ============================================================
+// OPEN BANKING API ENDPOINTS
+// ============================================================
+
+// OB-1. OAuth 인증 시작
+app.get('/api/openbank/authorize', async (c) => {
+    const clientId = c.env.OPENBANK_CLIENT_ID;
+    if (!clientId) return c.json({ error: 'Open Banking not configured' }, 500);
+    const redirectUri = `${new URL(c.req.url).origin}/api/openbank/callback`;
+    const state = crypto.randomUUID();
+    const userId = c.req.query('user_id');
+
+    // Save state + userId to DB for CSRF verification
+    db.run(
+        `INSERT INTO logs (related_table, related_id, memo) VALUES ('oauth_state', ?, ?)`,
+        [parseInt(userId) || 0, JSON.stringify({ state, user_id: userId, created: Date.now() })]
+    );
+
+    const authUrl = `https://testapi.openbanking.or.kr/oauth/2.0/authorize`
+        + `?response_type=code`
+        + `&client_id=${clientId}`
+        + `&redirect_uri=${encodeURIComponent(redirectUri)}`
+        + `&scope=login inquiry`
+        + `&state=${state}`
+        + `&auth_type=0`;
+
+    return c.redirect(authUrl);
+});
+
+// OB-2. OAuth 콜백
+app.get('/api/openbank/callback', async (c) => {
+    const code = c.req.query('code');
+    const state = c.req.query('state');
+    const error = c.req.query('error');
+
+    if (error) return c.json({ error: c.req.query('error_description') || error }, 400);
+
+    // Find state in logs to get userId
+    const stateRow = await new Promise((resolve) => {
+        db.get(
+            `SELECT id, memo FROM logs WHERE related_table = 'oauth_state' AND memo LIKE ? ORDER BY id DESC LIMIT 1`,
+            [`%"state":"${state}"%`],
+            (err, row) => resolve(row)
+        );
+    });
+
+    let userId = null;
+    if (stateRow) {
+        try { userId = JSON.parse(stateRow.memo).user_id; } catch(e) {}
+    }
+
+    // Exchange code for token
+    const redirectUri = `${new URL(c.req.url).origin}/api/openbank/callback`;
+    const tokenRes = await fetch('https://testapi.openbanking.or.kr/oauth/2.0/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            code,
+            client_id: c.env.OPENBANK_CLIENT_ID || '',
+            client_secret: c.env.OPENBANK_CLIENT_SECRET || '',
+            redirect_uri: redirectUri,
+            grant_type: 'authorization_code'
+        })
+    });
+
+    const tokens = await tokenRes.json();
+    if (tokens.error) return c.json({ error: tokens.error_description || tokens.error }, 400);
+
+    // Save token to bank_tokens
+    if (userId) {
+        const expiresIn = tokens.expires_in || 86400;
+        const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+        await new Promise((resolve) => {
+            db.run(
+                `INSERT INTO bank_tokens (user_id, access_token, refresh_token, token_type, expires_at, scope)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [userId, tokens.access_token, tokens.refresh_token, tokens.token_type || 'Bearer', expiresAt, tokens.scope || ''],
+                (err) => resolve()
+            );
+        });
+    }
+
+    return c.redirect('/settings_profile.html?bank=connected');
+});
+
+// OB-3. 토큰 갱신
+app.post('/api/openbank/refresh', async (c) => {
+    const userId = c.req.query('user_id');
+    const row = await new Promise((resolve) => {
+        db.get(`SELECT * FROM bank_tokens WHERE user_id = ? ORDER BY id DESC LIMIT 1`, [userId], (err, r) => resolve(r));
+    });
+    if (!row) return c.json({ error: 'No token found' }, 404);
+
+    const tokenRes = await fetch('https://testapi.openbanking.or.kr/oauth/2.0/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            client_id: c.env.OPENBANK_CLIENT_ID || '',
+            client_secret: c.env.OPENBANK_CLIENT_SECRET || '',
+            refresh_token: row.refresh_token,
+            grant_type: 'refresh_token'
+        })
+    });
+
+    const newTokens = await tokenRes.json();
+    if (newTokens.error) return c.json({ error: newTokens.error_description || newTokens.error }, 400);
+
+    const expiresIn = newTokens.expires_in || 86400;
+    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+    await new Promise((resolve) => {
+        db.run(
+            `UPDATE bank_tokens SET access_token = ?, refresh_token = ?, expires_at = ? WHERE id = ?`,
+            [newTokens.access_token, newTokens.refresh_token, expiresAt, row.id],
+            (err) => resolve()
+        );
+    });
+
+    return c.json({ message: 'Token refreshed', expires_at: expiresAt });
+});
+
+// OB-4. 계좌 목록 조회
+app.get('/api/openbank/accounts', async (c) => {
+    const userId = c.req.query('user_id');
+    db.all(`SELECT * FROM bank_accounts WHERE user_id = ? ORDER BY is_primary DESC, id ASC`, [userId], (err, rows) => {
+        if (err) return c.json({ error: err.message }, 500);
+        return c.json(rows || []);
+    });
+});
+
+// OB-5. 계좌 등록
+app.post('/api/openbank/accounts', async (c) => {
+    const body = await getBodySafely(c);
+    const { user_id, bank_code, bank_name, account_num, account_alias, is_primary } = body;
+
+    if (!user_id || !bank_code || !account_num) {
+        return c.json({ error: 'Missing required fields' }, 400);
+    }
+
+    db.run(
+        `INSERT INTO bank_accounts (user_id, bank_code, bank_name, account_num, account_alias, is_primary)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [user_id, bank_code, bank_name, account_num, account_alias || '', is_primary ? 1 : 0],
+        function(err) {
+            if (err) return c.json({ error: err.message }, 500);
+            return c.json({ message: 'Account registered', id: this.lastID });
+        }
+    );
+});
+
+// OB-6. 계좌 설정 변경 (동기화 주기 등)
+app.put('/api/openbank/accounts/:id', async (c) => {
+    const accountId = c.req.params.id;
+    const body = await getBodySafely(c);
+    const { sync_interval, account_alias, is_primary } = body;
+
+    const validIntervals = ['manual', '5min', '1h', '3h', 'daily'];
+    if (sync_interval && !validIntervals.includes(sync_interval)) {
+        return c.json({ error: 'Invalid sync_interval' }, 400);
+    }
+
+    db.run(
+        `UPDATE bank_accounts SET sync_interval = COALESCE(?, sync_interval), account_alias = COALESCE(?, account_alias), is_primary = COALESCE(?, is_primary) WHERE id = ?`,
+        [sync_interval || null, account_alias || null, is_primary !== undefined ? (is_primary ? 1 : 0) : null, accountId],
+        function(err) {
+            if (err) return c.json({ error: err.message }, 500);
+            return c.json({ message: 'Account settings updated' });
+        }
+    );
+});
+
+// OB-7. 계좌 삭제
+app.delete('/api/openbank/accounts/:id', async (c) => {
+    const accountId = c.req.params.id;
+    db.run(`DELETE FROM bank_accounts WHERE id = ?`, [accountId], function(err) {
+        if (err) return c.json({ error: err.message }, 500);
+        return c.json({ message: 'Account deleted' });
+    });
+});
+
+// OB-8. 거래내역 조회 + DB 저장
+app.get('/api/openbank/transactions', async (c) => {
+    const userId = c.req.query('user_id');
+    const accountId = c.req.query('account_id');
+    const fromDate = c.req.query('from_date');
+    const toDate = c.req.query('to_date');
+
+    // Get valid token
+    const tokenRow = await new Promise((resolve) => {
+        db.get(`SELECT * FROM bank_tokens WHERE user_id = ? ORDER BY id DESC LIMIT 1`, [userId], (err, r) => resolve(r));
+    });
+    if (!tokenRow) return c.json({ error: 'No bank token found. Please connect your bank account first.' }, 401);
+
+    // Get account
+    const account = await new Promise((resolve) => {
+        db.get(`SELECT * FROM bank_accounts WHERE id = ? AND user_id = ?`, [accountId, userId], (err, r) => resolve(r));
+    });
+    if (!account) return c.json({ error: 'Account not found' }, 404);
+
+    // Determine date range
+    const from = fromDate || (account.last_synced_at ? account.last_synced_at.replace(/[-:T]/g, '').slice(0, 8) : formatDateDaysAgo(7));
+    const to = toDate || formatDateToday();
+
+    // Call Open Banking API
+    const apiUrl = `${c.env.OPENBANK_API_URL || 'https://testapi.openbanking.or.kr'}/v2.0/account/transaction_list`
+        + `?fintech_use_num=${account.account_num}`
+        + `&inquiry_type=3`
+        + `&inquiry_base=D`
+        + `&from_date=${from.replace(/-/g, '')}`
+        + `&to_date=${to.replace(/-/g, '')}`
+        + `&sort_order=D`;
+
+    const tranRes = await fetch(apiUrl, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${tokenRow.access_token}` }
+    });
+
+    const tranData = await tranRes.json();
+    if (tranData.rsp_code && tranData.rsp_code !== 'A0000') {
+        return c.json({ error: tranData.rsp_message || 'API error', code: tranData.rsp_code }, 502);
+    }
+
+    // Save transactions (dedup)
+    const transactions = tranData.res_list || [];
+    let savedCount = 0;
+    for (const t of transactions) {
+        const exists = await new Promise((resolve) => {
+            db.get(
+                `SELECT id FROM bank_transactions WHERE user_id = ? AND account_id = ? AND tran_date = ? AND amount = ? AND memo = ?`,
+                [userId, accountId, t.tran_date, t.tran_amt, t.print_content || ''],
+                (err, r) => resolve(!!r)
+            );
+        });
+        if (!exists) {
+            await new Promise((resolve) => {
+                db.run(
+                    `INSERT INTO bank_transactions (user_id, account_id, tran_date, tran_time, tran_type, amount, after_balance, memo, branch_name, source)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'openbank')`,
+                    [userId, accountId, t.tran_date, t.tran_time, t.inout_type, parseInt(t.tran_amt) || 0, parseInt(t.after_balance) || 0, t.print_content || '', t.branch_name || ''],
+                    (err) => { if (!err) savedCount++; resolve(); }
+                );
+            });
+        }
+    }
+
+    // Update last_synced_at
+    db.run(`UPDATE bank_accounts SET last_synced_at = datetime('now') WHERE id = ?`, [accountId]);
+
+    return c.json({ synced: savedCount, total: transactions.length });
+});
+
+// OB-9. 수동 동기화 + 자동 매칭
+app.post('/api/openbank/sync', async (c) => {
+    const userId = c.req.query('user_id');
+
+    // Get unprocessed deposits
+    const unprocessed = await new Promise((resolve) => {
+        db.all(
+            `SELECT * FROM bank_transactions WHERE user_id = ? AND is_processed = 0 AND tran_type = '입금' ORDER BY tran_date ASC, tran_time ASC`,
+            [userId],
+            (err, rows) => resolve(rows || [])
+        );
+    });
+
+    // Get active contracts for matching
+    const contracts = await new Promise((resolve) => {
+        db.all(
+            `SELECT c.*, u.nickname, r.room_number, b.name as building,
+                    GROUP_CONCAT(ck.keyword) as keywords
+             FROM contracts c
+             LEFT JOIN users u ON c.tenant_id = u.id
+             LEFT JOIN rooms r ON c.room_id = r.id
+             LEFT JOIN buildings b ON r.building_id = b.id
+             LEFT JOIN contract_keywords ck ON c.id = ck.contract_id
+             WHERE c.tenant_id IS NOT NULL
+             GROUP BY c.id`,
+            [],
+            (err, rows) => resolve(rows || [])
+        );
+    });
+
+    const results = [];
+    for (const tran of unprocessed) {
+        const memo = tran.memo || '';
+        const tokens = memo.split(/\s+/).filter(t => t.length > 0);
+        const keyword = tokens.length > 0 ? tokens[tokens.length - 1] : '';
+
+        // Score matching (same logic as payments_keyword.html)
+        let bestContract = null;
+        let bestScore = 0;
+        for (const contract of contracts) {
+            let score = 0;
+            const cKeywords = contract.keywords ? contract.keywords.split(',') : [];
+            tokens.forEach(k => {
+                if (cKeywords.includes(k)) score += 100;
+                if (contract.nickname && contract.nickname.includes(k)) score += 10;
+                if (String(contract.room_number).includes(k)) score += 10;
+            });
+            if (score > bestScore) { bestScore = score; bestContract = contract; }
+        }
+
+        if (bestContract && bestScore >= 100) {
+            // Auto-allocate
+            const allocResult = await autoAllocatePayment(bestContract.id, tran.amount, `${tran.tran_date}T${tran.tran_time || '12:00'}`, memo);
+            db.run(`UPDATE bank_transactions SET is_processed = 1, payment_id = ? WHERE id = ?`, [allocResult.paymentId, tran.id]);
+            results.push({ tran_id: tran.id, matched: true, contract_id: bestContract.id, payment_id: allocResult.paymentId });
+        } else {
+            results.push({ tran_id: tran.id, matched: false, reason: 'low_score', score: bestScore });
+        }
+    }
+
+    return c.json({ results });
+});
+
+// OB-10. 동기화 상태 조회
+app.get('/api/openbank/sync/status', async (c) => {
+    const userId = c.req.query('user_id');
+
+    const accounts = await new Promise((resolve) => {
+        db.all(`SELECT id, bank_name, account_alias, sync_interval, last_synced_at FROM bank_accounts WHERE user_id = ?`, [userId], (err, rows) => resolve(rows || []));
+    });
+
+    const unprocessedCount = await new Promise((resolve) => {
+        db.get(`SELECT COUNT(*) as count FROM bank_transactions WHERE user_id = ? AND is_processed = 0 AND tran_type = '입금'`, [userId], (err, r) => resolve(r ? r.count : 0));
+    });
+
+    const hasToken = await new Promise((resolve) => {
+        db.get(`SELECT id FROM bank_tokens WHERE user_id = ? ORDER BY id DESC LIMIT 1`, [userId], (err, r) => resolve(!!r));
+    });
+
+    return c.json({ accounts, unprocessed_count: unprocessedCount, has_token: hasToken });
+});
+
+// OB-11. 수동 결제 추가 (건물/호수/날짜/금액 + 자동 재배정)
+app.post('/api/payments/manual', async (c) => {
+    const body = await getBodySafely(c);
+    const { user_id, contract_id, paid_at, amount, memo } = body;
+
+    if (!contract_id || !paid_at || !amount) {
+        return c.json({ error: 'contract_id, paid_at, amount are required' }, 400);
+    }
+
+    // Create payment record
+    const paymentResult = await new Promise((resolve, reject) => {
+        db.run(
+            `INSERT INTO payments (contract_id, amount, paid_at, memo, type) VALUES (?, ?, ?, ?, 'monthly_rent')`,
+            [contract_id, amount, paid_at, memo || '수동 추가'],
+            function(err) {
+                if (err) reject(err);
+                else resolve({ id: this.lastID });
+            }
+        );
+    });
+
+    // Auto-reallocate invoices
+    const reallocationResult = await reallocateInvoices(contract_id);
+
+    return c.json({
+        message: '수동 결제가 추가되었고 Invoice 배정이 조정되었습니다.',
+        payment_id: paymentResult.id,
+        reallocation: reallocationResult
+    });
+});
+
+// OB-12. 건물 목록 (권한별 필터링)
+app.get('/api/buildings/for-user', async (c) => {
+    const userId = c.req.query('user_id');
+    const userRole = c.req.query('role');
+
+    let query, params;
+    if (userRole === 'admin') {
+        query = `SELECT b.id, b.name FROM buildings b ORDER BY b.name`;
+        params = [];
+    } else {
+        query = `SELECT b.id, b.name FROM buildings b
+                 JOIN landlord_buildings lb ON b.id = lb.building_id
+                 WHERE lb.landlord_id = ? ORDER BY b.name`;
+        params = [userId];
+    }
+
+    db.all(query, params, (err, rows) => {
+        if (err) return c.json({ error: err.message }, 500);
+        return c.json(rows || []);
+    });
+});
+
+// OB-13. 건물의 호수 목록
+app.get('/api/buildings/:id/rooms', async (c) => {
+    const buildingId = c.req.params.id;
+    db.all(`
+        SELECT r.id, r.room_number, c.id as contract_id, c.tenant_id,
+               u.nickname as tenant_name
+        FROM rooms r
+        LEFT JOIN contracts c ON r.id = c.room_id AND c.tenant_id IS NOT NULL
+        LEFT JOIN users u ON c.tenant_id = u.id
+        WHERE r.building_id = ?
+        ORDER BY CAST(r.room_number AS INTEGER)
+    `, [buildingId], (err, rows) => {
+        if (err) return c.json({ error: err.message }, 500);
+        return c.json(rows || []);
+    });
+});
+
+// Helper: Auto-allocate payment to invoices
+async function autoAllocatePayment(contractId, amount, paidAt, memo) {
+    return new Promise((resolve, reject) => {
+        db.run(
+            `INSERT INTO payments (contract_id, amount, paid_at, memo, type) VALUES (?, ?, ?, ?, 'monthly_rent')`,
+            [contractId, amount, paidAt, memo || ''],
+            function(err) {
+                if (err) return reject(err);
+                const paymentId = this.lastID;
+
+                // Get unpaid invoices
+                db.all(
+                    `SELECT i.id, i.type, i.billing_month, i.amount as due_amount, i.due_date
+                     FROM invoices i WHERE i.contract_id = ? AND i.status != '완납'
+                     ORDER BY i.billing_month ASC`,
+                    [contractId],
+                    (err2, invoices) => {
+                        if (err2) return reject(err2);
+
+                        let remaining = amount;
+                        const allocs = [];
+                        let processed = 0;
+
+                        if (!invoices || invoices.length === 0) {
+                            // Create next month invoice
+                            const nextMonth = new Date().toISOString().slice(0, 7);
+                            db.run(
+                                `INSERT INTO invoices (contract_id, type, billing_month, amount, status, due_date) VALUES (?, 'monthly_rent', ?, ?, '부분납부', ?)`,
+                                [contractId, nextMonth, amount, paidAt],
+                                function(err3) {
+                                    if (err3) return reject(err3);
+                                    db.run(
+                                        `INSERT INTO payment_allocation (payment_id, invoice_id, amount) VALUES (?, ?, ?)`,
+                                        [paymentId, this.lastID, amount],
+                                        (err4) => resolve({ paymentId, allocations: [{ invoice_id: this.lastID, amount }] })
+                                    );
+                                }
+                            );
+                            return;
+                        }
+
+                        invoices.forEach(inv => {
+                            if (remaining <= 0) {
+                                processed++;
+                                if (processed === invoices.length) resolve({ paymentId, allocations: allocs });
+                                return;
+                            }
+                            const owed = inv.due_amount - (inv.paid_amount || 0);
+                            const allocate = Math.min(remaining, owed);
+                            db.run(
+                                `INSERT INTO payment_allocation (payment_id, invoice_id, amount) VALUES (?, ?, ?)`,
+                                [paymentId, inv.id, allocate],
+                                (err5) => {
+                                    if (!err5) {
+                                        allocs.push({ invoice_id: inv.id, amount: allocate });
+                                        remaining -= allocate;
+                                        // Update invoice status
+                                        const newStatus = allocate >= owed ? '완납' : '부분납부';
+                                        db.run(`UPDATE invoices SET status = ? WHERE id = ?`, [newStatus, inv.id]);
+                                    }
+                                    processed++;
+                                    if (processed === invoices.length) resolve({ paymentId, allocations: allocs });
+                                }
+                            );
+                        });
+                    }
+                );
+            }
+        );
+    });
+}
+
+// Helper: Reallocate all invoices for a contract (after mid-insertion)
+async function reallocateInvoices(contractId) {
+    // 1. Get all payments sorted by paid_at
+    const allPayments = await new Promise((resolve) => {
+        db.all(
+            `SELECT id, amount, paid_at, type FROM payments WHERE contract_id = ? ORDER BY paid_at ASC, id ASC`,
+            [contractId],
+            (err, rows) => resolve(rows || [])
+        );
+    });
+
+    // 2. Get contract info
+    const contract = await new Promise((resolve) => {
+        db.get(`SELECT * FROM contracts WHERE id = ?`, [contractId], (err, r) => resolve(r));
+    });
+    if (!contract) return { error: 'Contract not found' };
+
+    // 3. Get all non-deposit invoices
+    const allInvoices = await new Promise((resolve) => {
+        db.all(
+            `SELECT id, type, billing_month, amount as due_amount, due_date FROM invoices WHERE contract_id = ? AND type != 'deposit' ORDER BY billing_month ASC`,
+            [contractId],
+            (err, rows) => resolve(rows || [])
+        );
+    });
+
+    // 4. Delete existing allocations
+    await new Promise((resolve) => {
+        db.run(
+            `DELETE FROM payment_allocation WHERE payment_id IN (SELECT id FROM payments WHERE contract_id = ?)`,
+            [contractId],
+            (err) => resolve()
+        );
+    });
+
+    // 5. Reallocate sequentially
+    let invoiceIdx = 0;
+    const results = [];
+
+    for (const payment of allPayments) {
+        let remaining = payment.amount;
+
+        for (let i = invoiceIdx; i < allInvoices.length && remaining > 0; i++) {
+            const inv = allInvoices[i];
+            const alreadyAllocated = results
+                .filter(r => r.invoice_id === inv.id)
+                .reduce((sum, r) => sum + r.amount, 0);
+            const owed = inv.due_amount - alreadyAllocated;
+            if (owed <= 0) continue;
+
+            const allocate = Math.min(remaining, owed);
+            results.push({ payment_id: payment.id, invoice_id: inv.id, amount: allocate, billing_month: inv.billing_month });
+            remaining -= allocate;
+            if (owed <= allocate) invoiceIdx = i + 1;
+        }
+
+        // Create new invoice if remaining
+        if (remaining > 0) {
+            const lastMonth = allInvoices.length > 0 ? allInvoices[allInvoices.length - 1].billing_month : new Date().toISOString().slice(0, 7);
+            const nextMonth = incrementMonth(lastMonth);
+            const newInvId = await new Promise((resolve) => {
+                db.run(
+                    `INSERT INTO invoices (contract_id, type, billing_month, amount, status, due_date) VALUES (?, 'monthly_rent', ?, ?, '부분납부', ?)`,
+                    [contractId, nextMonth, contract.monthly_rent, nextMonth + '-01'],
+                    function(err) { resolve(this.lastID); }
+                );
+            });
+            results.push({ payment_id: payment.id, invoice_id: newInvId, amount: remaining, billing_month: nextMonth });
+            allInvoices.push({ id: newInvId, type: 'monthly_rent', billing_month: nextMonth, due_amount: contract.monthly_rent });
+            remaining = 0;
+        }
+    }
+
+    // 6. Save new allocations
+    for (const r of results) {
+        await new Promise((resolve) => {
+            db.run(`INSERT INTO payment_allocation (payment_id, invoice_id, amount) VALUES (?, ?, ?)`, [r.payment_id, r.invoice_id, r.amount], () => resolve());
+        });
+    }
+
+    // 7. Update invoice statuses
+    for (const inv of allInvoices) {
+        const totalPaid = results.filter(r => r.invoice_id === inv.id).reduce((sum, r) => sum + r.amount, 0);
+        const newStatus = totalPaid >= inv.due_amount ? '완납' : (totalPaid > 0 ? '부분납부' : '미납');
+        await new Promise((resolve) => {
+            db.run(`UPDATE invoices SET status = ? WHERE id = ?`, [newStatus, inv.id], () => resolve());
+        });
+    }
+
+    return { reallocated: true, payment_count: allPayments.length, allocation_count: results.length, details: results };
+}
+
+// Helper: Increment month
+function incrementMonth(yyyyMM) {
+    const [y, m] = yyyyMM.split('-').map(Number);
+    let nextY = y, nextM = m + 1;
+    if (nextM > 12) { nextY++; nextM = 1; }
+    return `${nextY}-${String(nextM).padStart(2, '0')}`;
+}
+
+// Helper: Format date helpers
+function formatDateToday() {
+    return new Date().toISOString().slice(0, 10).replace(/-/g, '');
+}
+function formatDateDaysAgo(days) {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    return d.toISOString().slice(0, 10).replace(/-/g, '');
+}
 
 // Helper to extract body in Hono safely without throwing for empty bodies
 async function getBodySafely(c) {
