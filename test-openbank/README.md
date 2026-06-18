@@ -61,7 +61,6 @@ EOF
 | `OPENBANK_CLIENT_ID` | 오픈뱅킹 클라이언트 ID | OAuth 시 | secret / .env |
 | `OPENBANK_CLIENT_SECRET` | 오픈뱅킹 클라이언트 시크릿 | OAuth 시 | secret / .env |
 | `OPENBANK_API_URL` | 오픈뱅킹 API URL | 선택 | [vars] / .env |
-| `KAKAO_JS_KEY` | 카카오 JS 키 | 선택 | [vars] / .env |
 
 > ⚠️ **보안 주의:** `OPENBANK_CLIENT_SECRET`, `DATABASE_URL` 등 비밀값은 절대 `wrangler.toml`의 `[vars]`에 평문으로 적지 마세요. 항상 `wrangler secret put` 또는 Cloudflare Dashboard를 사용하세요.
 
