@@ -2083,10 +2083,110 @@ app.post('/api/payments/batch', (req, res) => {
 app.post('/api/payments/allocate', (req, res) => {
     const { contract_id, amount, paid_at, memo, allocations } = req.body;
 
-    if (!contract_id || !amount || !allocations) {
-        return res.status(400).json({ error: 'Missing required fields' });
+    if (!contract_id || !amount) {
+        return res.status(400).json({ error: 'contract_id and amount are required' });
     }
 
+    // Auto FIFO allocation mode: allocations 없으면 자동 매핑
+    if (!allocations || allocations.length === 0) {
+        db.serialize(() => {
+            db.run("BEGIN TRANSACTION");
+
+            // 1. Create Payment record
+            db.run(
+                `INSERT INTO payments(contract_id, amount, paid_at, memo, type) VALUES(?, ?, ?, ?, 'monthly_rent')`,
+                [contract_id, amount, paid_at, memo || ''],
+                function (err) {
+                    if (err) {
+                        db.run("ROLLBACK");
+                        return res.status(500).json({ error: err.message });
+                    }
+                    const paymentId = this.lastID;
+
+                    // 2. Get invoices: 보증금 먼저, 월세는 청구월 순서
+                    db.all(
+                        `SELECT id, type, billing_month, amount as due_amount, due_date,
+                                COALESCE((SELECT SUM(pa.amount) FROM payment_allocation pa WHERE pa.invoice_id = invoices.id), 0) as paid_amount
+                         FROM invoices WHERE contract_id = ?
+                         ORDER BY CASE WHEN type = 'deposit' THEN 0 ELSE 1 END, billing_month ASC`,
+                        [contract_id],
+                        (err2, invoices) => {
+                            if (err2) {
+                                db.run("ROLLBACK");
+                                return res.status(500).json({ error: err2.message });
+                            }
+
+                            let remaining = amount;
+                            const allocResults = [];
+                            let processed = 0;
+                            const totalInvoices = invoices.length;
+
+                            if (totalInvoices === 0) {
+                                db.run("COMMIT");
+                                return res.json({ message: 'Payment saved, no invoices to allocate', paymentId, allocations: [] });
+                            }
+
+                            // Pre-calculate allocations synchronously to avoid race conditions
+                            const allocPlan = [];
+                            let planRemaining = amount;
+                            for (const inv of invoices) {
+                                if (planRemaining <= 0) break;
+                                const owed = inv.due_amount - inv.paid_amount;
+                                if (owed <= 0) continue;
+                                const allocate = Math.min(planRemaining, owed);
+                                allocPlan.push({ inv, allocate });
+                                planRemaining -= allocate;
+                            }
+
+                            if (allocPlan.length === 0) {
+                                db.run("COMMIT");
+                                return res.json({ message: 'Payment saved, no invoices to allocate', paymentId, allocations: [] });
+                            }
+
+                            let planProcessed = 0;
+                            allocPlan.forEach(({ inv, allocate }) => {
+                                db.run(
+                                    `INSERT INTO payment_allocation(payment_id, invoice_id, amount) VALUES(?, ?, ?)`,
+                                    [paymentId, inv.id, allocate],
+                                    (err3) => {
+                                        if (err3) {
+                                            db.run("ROLLBACK");
+                                            return res.status(500).json({ error: err3.message });
+                                        }
+
+                                        allocResults.push({ invoice_id: inv.id, type: inv.type, billing_month: inv.billing_month, amount: allocate });
+
+                                        // Update invoice status
+                                        const newPaid = inv.paid_amount + allocate;
+                                        let newStatus;
+                                        if (newPaid >= inv.due_amount) {
+                                            const billingMonth = inv.billing_month || '';
+                                            const paidMonth = paid_at ? paid_at.substring(0, 7) : '';
+                                            if (paidMonth < billingMonth) newStatus = '완납(선납)';
+                                            else if (paidMonth > billingMonth) newStatus = '완납(후납)';
+                                            else newStatus = '완납';
+                                        } else {
+                                            newStatus = '부분납부';
+                                        }
+                                        db.run("UPDATE invoices SET status = ? WHERE id = ?", [newStatus, inv.id]);
+
+                                        planProcessed++;
+                                        if (planProcessed === allocPlan.length) {
+                                            db.run("COMMIT");
+                                            res.json({ message: 'Payment allocated (auto FIFO)', paymentId, allocations: allocResults });
+                                        }
+                                    }
+                                );
+                            });
+                        }
+                    );
+                }
+            );
+        });
+        return;
+    }
+
+    // Manual allocation mode: allocations 지정된 경우 기존 로직
     db.serialize(() => {
         db.run("BEGIN TRANSACTION");
 
@@ -2116,18 +2216,31 @@ app.post('/api/payments/allocate', (req, res) => {
                     if (hasError) return;
 
                     const updateInvoiceStatus = (invId) => {
-                        // Check total amount paid for this invoice
+                        // Check total amount paid and latest payment date for this invoice
                         const statusQuery = `
 SELECT
-i.amount as due,
-    COALESCE(SUM(pa.amount), 0) as paid
+    i.amount as due,
+    i.billing_month,
+    COALESCE(SUM(pa.amount), 0) as paid,
+    MAX(p.paid_at) as last_paid_at
                             FROM invoices i
                             LEFT JOIN payment_allocation pa ON i.id = pa.invoice_id
+                            LEFT JOIN payments p ON pa.payment_id = p.id
                             WHERE i.id = ?
     `;
                         db.get(statusQuery, [invId], (err, row) => {
                             if (err || !row) return;
-                            const newStatus = (row.paid >= row.due) ? '완납' : '부분납부';
+                            let newStatus;
+                            if (row.paid >= row.due) {
+                                // 완납 - 청구월 기준 선납/후납 구분
+                                const billingMonth = row.billing_month || ''; // e.g. "2024-04"
+                                const paidMonth = row.last_paid_at ? row.last_paid_at.substring(0, 7) : ''; // e.g. "2024-03"
+                                if (paidMonth < billingMonth) newStatus = '완납(선납)';
+                                else if (paidMonth > billingMonth) newStatus = '완납(후납)';
+                                else newStatus = '완납';
+                            } else {
+                                newStatus = '부분납부';
+                            }
                             db.run("UPDATE invoices SET status = ? WHERE id = ?", [newStatus, invId]);
                         });
                     };

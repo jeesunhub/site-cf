@@ -1,4 +1,4 @@
-ㅈㅐ
+
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
@@ -5670,351 +5670,234 @@ function syncContractInvoices(contractId, callback) {
     });
 }
 
-const server = app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-}).on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-        console.error(`Port ${PORT} is already in use. Please kill the process using it and try again.`);
-        process.exit(1);
-    } else {
-        console.error('Server error:', err);
-    }
-});
-
-
-// ============================================================
-// OPEN BANKING API ENDPOINTS
-// ============================================================
-
-// OB-1. OAuth 인증 시작
-app.get('/api/openbank/authorize', async (c) => {
-    const clientId = c.env.OPENBANK_CLIENT_ID;
-    if (!clientId) return c.json({ error: 'Open Banking not configured' }, 500);
-    const redirectUri = `${new URL(c.req.url).origin}/api/openbank/callback`;
-    const state = crypto.randomUUID();
-    const userId = c.req.query('user_id');
-
-    // Save state + userId to DB for CSRF verification
-    db.run(
-        `INSERT INTO logs (related_table, related_id, memo) VALUES ('oauth_state', ?, ?)`,
-        [parseInt(userId) || 0, JSON.stringify({ state, user_id: userId, created: Date.now() })]
-    );
-
-    const authUrl = `https://testapi.openbanking.or.kr/oauth/2.0/authorize`
-        + `?response_type=code`
-        + `&client_id=${clientId}`
-        + `&redirect_uri=${encodeURIComponent(redirectUri)}`
-        + `&scope=login inquiry`
-        + `&state=${state}`
-        + `&auth_type=0`;
-
-    return c.redirect(authUrl);
-});
-
-// OB-2. OAuth 콜백
-app.get('/api/openbank/callback', async (c) => {
-    const code = c.req.query('code');
-    const state = c.req.query('state');
-    const error = c.req.query('error');
-
-    if (error) return c.json({ error: c.req.query('error_description') || error }, 400);
-
-    // Find state in logs to get userId
-    const stateRow = await new Promise((resolve) => {
-        db.get(
-            `SELECT id, memo FROM logs WHERE related_table = 'oauth_state' AND memo LIKE ? ORDER BY id DESC LIMIT 1`,
-            [`%"state":"${state}"%`],
-            (err, row) => resolve(row)
-        );
-    });
-
-    let userId = null;
-    if (stateRow) {
-        try { userId = JSON.parse(stateRow.memo).user_id; } catch(e) {}
-    }
-
-    // Exchange code for token
-    const redirectUri = `${new URL(c.req.url).origin}/api/openbank/callback`;
-    const tokenRes = await fetch('https://testapi.openbanking.or.kr/oauth/2.0/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-            code,
-            client_id: c.env.OPENBANK_CLIENT_ID || '',
-            client_secret: c.env.OPENBANK_CLIENT_SECRET || '',
-            redirect_uri: redirectUri,
-            grant_type: 'authorization_code'
-        })
-    });
-
-    const tokens = await tokenRes.json();
-    if (tokens.error) return c.json({ error: tokens.error_description || tokens.error }, 400);
-
-    // Save token to bank_tokens
-    if (userId) {
-        const expiresIn = tokens.expires_in || 86400;
-        const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
-        await new Promise((resolve) => {
-            db.run(
-                `INSERT INTO bank_tokens (user_id, access_token, refresh_token, token_type, expires_at, scope)
-                 VALUES (?, ?, ?, ?, ?, ?)`,
-                [userId, tokens.access_token, tokens.refresh_token, tokens.token_type || 'Bearer', expiresAt, tokens.scope || ''],
-                (err) => resolve()
-            );
-        });
-    }
-
-    return c.redirect('/settings_profile.html?bank=connected');
-});
-
-// OB-3. 토큰 갱신
-app.post('/api/openbank/refresh', async (c) => {
-    const userId = c.req.query('user_id');
-    const row = await new Promise((resolve) => {
-        db.get(`SELECT * FROM bank_tokens WHERE user_id = ? ORDER BY id DESC LIMIT 1`, [userId], (err, r) => resolve(r));
-    });
-    if (!row) return c.json({ error: 'No token found' }, 404);
-
-    const tokenRes = await fetch('https://testapi.openbanking.or.kr/oauth/2.0/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-            client_id: c.env.OPENBANK_CLIENT_ID || '',
-            client_secret: c.env.OPENBANK_CLIENT_SECRET || '',
-            refresh_token: row.refresh_token,
-            grant_type: 'refresh_token'
-        })
-    });
-
-    const newTokens = await tokenRes.json();
-    if (newTokens.error) return c.json({ error: newTokens.error_description || newTokens.error }, 400);
-
-    const expiresIn = newTokens.expires_in || 86400;
-    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
-    await new Promise((resolve) => {
-        db.run(
-            `UPDATE bank_tokens SET access_token = ?, refresh_token = ?, expires_at = ? WHERE id = ?`,
-            [newTokens.access_token, newTokens.refresh_token, expiresAt, row.id],
-            (err) => resolve()
-        );
-    });
-
-    return c.json({ message: 'Token refreshed', expires_at: expiresAt });
-});
-
-// OB-4. 계좌 목록 조회
-app.get('/api/openbank/accounts', async (c) => {
-    const userId = c.req.query('user_id');
-    db.all(`SELECT * FROM bank_accounts WHERE user_id = ? ORDER BY is_primary DESC, id ASC`, [userId], (err, rows) => {
-        if (err) return c.json({ error: err.message }, 500);
-        return c.json(rows || []);
-    });
-});
-
-// OB-5. 계좌 등록
-app.post('/api/openbank/accounts', async (c) => {
+// app.listen removed - Cloudflare Workers uses onRequest export; Node.js uses server.js/server.mjs
+// PDF Import & Parsing Endpoint
+app.post('/api/payments/import-pdf', async (c) => {
+    const pdfParse = (await import('pdf-parse')).default;
     const body = await getBodySafely(c);
-    const { user_id, bank_code, bank_name, account_num, account_alias, is_primary } = body;
+    const files = c.req.rawFiles || [];
 
-    if (!user_id || !bank_code || !account_num) {
-        return c.json({ error: 'Missing required fields' }, 400);
+    if (!files || files.length === 0) {
+        return c.json({ error: 'PDF 파일이 필요합니다.' }, 400);
     }
 
-    db.run(
-        `INSERT INTO bank_accounts (user_id, bank_code, bank_name, account_num, account_alias, is_primary)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [user_id, bank_code, bank_name, account_num, account_alias || '', is_primary ? 1 : 0],
-        function(err) {
-            if (err) return c.json({ error: err.message }, 500);
-            return c.json({ message: 'Account registered', id: this.lastID });
-        }
-    );
-});
-
-// OB-6. 계좌 설정 변경 (동기화 주기 등)
-app.put('/api/openbank/accounts/:id', async (c) => {
-    const accountId = c.req.params.id;
-    const body = await getBodySafely(c);
-    const { sync_interval, account_alias, is_primary } = body;
-
-    const validIntervals = ['manual', '5min', '1h', '3h', 'daily'];
-    if (sync_interval && !validIntervals.includes(sync_interval)) {
-        return c.json({ error: 'Invalid sync_interval' }, 400);
+    const file = files[0];
+    if (!file.name || !file.name.toLowerCase().endsWith('.pdf')) {
+        return c.json({ error: 'PDF 파일만 지원합니다.' }, 400);
     }
 
-    db.run(
-        `UPDATE bank_accounts SET sync_interval = COALESCE(?, sync_interval), account_alias = COALESCE(?, account_alias), is_primary = COALESCE(?, is_primary) WHERE id = ?`,
-        [sync_interval || null, account_alias || null, is_primary !== undefined ? (is_primary ? 1 : 0) : null, accountId],
-        function(err) {
-            if (err) return c.json({ error: err.message }, 500);
-            return c.json({ message: 'Account settings updated' });
-        }
-    );
-});
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const pdfData = await pdfParse(buffer);
+        const text = pdfData.text;
 
-// OB-7. 계좌 삭제
-app.delete('/api/openbank/accounts/:id', async (c) => {
-    const accountId = c.req.params.id;
-    db.run(`DELETE FROM bank_accounts WHERE id = ?`, [accountId], function(err) {
-        if (err) return c.json({ error: err.message }, 500);
-        return c.json({ message: 'Account deleted' });
-    });
-});
+        // Parse the PDF text into transaction rows
+        const parsedRows = parsePdfText(text);
 
-// OB-8. 거래내역 조회 + DB 저장
-app.get('/api/openbank/transactions', async (c) => {
-    const userId = c.req.query('user_id');
-    const accountId = c.req.query('account_id');
-    const fromDate = c.req.query('from_date');
-    const toDate = c.req.query('to_date');
-
-    // Get valid token
-    const tokenRow = await new Promise((resolve) => {
-        db.get(`SELECT * FROM bank_tokens WHERE user_id = ? ORDER BY id DESC LIMIT 1`, [userId], (err, r) => resolve(r));
-    });
-    if (!tokenRow) return c.json({ error: 'No bank token found. Please connect your bank account first.' }, 401);
-
-    // Get account
-    const account = await new Promise((resolve) => {
-        db.get(`SELECT * FROM bank_accounts WHERE id = ? AND user_id = ?`, [accountId, userId], (err, r) => resolve(r));
-    });
-    if (!account) return c.json({ error: 'Account not found' }, 404);
-
-    // Determine date range
-    const from = fromDate || (account.last_synced_at ? account.last_synced_at.replace(/[-:T]/g, '').slice(0, 8) : formatDateDaysAgo(7));
-    const to = toDate || formatDateToday();
-
-    // Call Open Banking API
-    const apiUrl = `${c.env.OPENBANK_API_URL || 'https://testapi.openbanking.or.kr'}/v2.0/account/transaction_list`
-        + `?fintech_use_num=${account.account_num}`
-        + `&inquiry_type=3`
-        + `&inquiry_base=D`
-        + `&from_date=${from.replace(/-/g, '')}`
-        + `&to_date=${to.replace(/-/g, '')}`
-        + `&sort_order=D`;
-
-    const tranRes = await fetch(apiUrl, {
-        method: 'GET',
-        headers: { 'Authorization': `Bearer ${tokenRow.access_token}` }
-    });
-
-    const tranData = await tranRes.json();
-    if (tranData.rsp_code && tranData.rsp_code !== 'A0000') {
-        return c.json({ error: tranData.rsp_message || 'API error', code: tranData.rsp_code }, 502);
-    }
-
-    // Save transactions (dedup)
-    const transactions = tranData.res_list || [];
-    let savedCount = 0;
-    for (const t of transactions) {
-        const exists = await new Promise((resolve) => {
-            db.get(
-                `SELECT id FROM bank_transactions WHERE user_id = ? AND account_id = ? AND tran_date = ? AND amount = ? AND memo = ?`,
-                [userId, accountId, t.tran_date, t.tran_amt, t.print_content || ''],
-                (err, r) => resolve(!!r)
-            );
+        return c.json({
+            message: 'PDF 파싱 완료',
+            totalRows: parsedRows.length,
+            rows: parsedRows
         });
-        if (!exists) {
-            await new Promise((resolve) => {
-                db.run(
-                    `INSERT INTO bank_transactions (user_id, account_id, tran_date, tran_time, tran_type, amount, after_balance, memo, branch_name, source)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'openbank')`,
-                    [userId, accountId, t.tran_date, t.tran_time, t.inout_type, parseInt(t.tran_amt) || 0, parseInt(t.after_balance) || 0, t.print_content || '', t.branch_name || ''],
-                    (err) => { if (!err) savedCount++; resolve(); }
-                );
+    } catch (err) {
+        console.error('[PDF Import] Error:', err.message);
+        return c.json({ error: 'PDF 파싱 중 오류가 발생했습니다: ' + err.message }, 500);
+    }
+});
+
+// PDF text parser - extracts transaction rows from bank statement PDF text
+function parsePdfText(text) {
+    // Pre-process: collapse spaced-out characters (common in Korean bank PDFs)
+    // e.g., "2 0 2 6 . 0 6 . 2 3" → "2026.06.23"
+    // e.g., "거 래 일 자" → "거래일자"
+    // e.g., "N G U Y E N" → "NGUYEN"
+    // Only apply if the text appears to have spaced-out patterns
+    const isSpacedOut = /[가-힣]\s[가-힣]\s[가-힣]/.test(text) || /\d\s\.\s\d/.test(text);
+    if (isSpacedOut) {
+        // Step 1: Extract and protect "원"-suffixed amounts BEFORE any collapsing
+        // This prevents reference numbers from merging with amounts
+        // Key insight: Korean bank amounts have max 3 digits between commas
+        const amountPlaceholders = [];
+        // Comma-formatted amounts: max 3 spaced digits between commas
+        text = text.replace(/((?:\d\s{0,1}){1,3}(?:,\s*(?:\d\s{0,1}){1,3})+\s*원)/g, (m) => {
+            const placeholder = `__AMT${amountPlaceholders.length}__`;
+            amountPlaceholders.push(m.replace(/\s+/g, ''));
+            return placeholder;
+        });
+        // Simple amounts (no comma): max 3 spaced digits before 원
+        text = text.replace(/((?:\d\s{0,1}){1,3}\s*원)/g, (m) => {
+            if (m.includes('__AMT')) return m;
+            const placeholder = `__AMT${amountPlaceholders.length}__`;
+            amountPlaceholders.push(m.replace(/\s+/g, ''));
+            return placeholder;
+        });
+
+        // Step 2: Collapse Korean-Korean and English-English (safe)
+        text = text.replace(/(?<=[가-힣])\s+(?=[가-힣])/g, '');
+        text = text.replace(/(?<=[A-Za-z])\s+(?=[A-Za-z])/g, '');
+
+        // Step 3: Collapse date patterns
+        text = text.replace(/(\d\s*)+\.\s*(\d\s*)+\.\s*(\d\s*)+/g, (m) => {
+            return m.replace(/\s+/g, '');
+        });
+
+        // Step 4: Collapse time patterns
+        text = text.replace(/(\d\s*)+:\s*(\d\s*)+(:\s*(\d\s*)+)*/g, (m) => {
+            return m.replace(/\s+/g, '');
+        });
+
+        // Step 5: Restore protected amounts
+        amountPlaceholders.forEach((val, idx) => {
+            text = text.replace(`__AMT${idx}__`, val);
+        });
+
+        text = text.replace(/ {2,}/g, ' ');
+    }
+
+    const rows = [];
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+    const dateRegex = /(\d{4}[\.-]\d{2}[\.-]\d{2})/;
+    const amountRegex = /([\d,]+)/g;
+    const timeRegex = /(\d{2}:\d{2}(?::\d{2})?)/;
+
+    let currentDate = null;
+    let currentTime = null;
+
+    for (const line of lines) {
+        if (line.includes('거래일자') || line.includes('거래내역') || line.includes('적요') ||
+            line.includes('입금액') || line.includes('출금액') || line.includes('잔액') ||
+            line.includes('내역') || line.includes('구분') || line.includes('번호')) {
+            continue;
+        }
+
+        const dateMatch = line.match(dateRegex);
+        if (dateMatch) {
+            currentDate = dateMatch[1].replace(/\./g, '-');
+        }
+
+        const timeMatch = line.match(timeRegex);
+        if (timeMatch) {
+            currentTime = timeMatch[1];
+        }
+
+        if (!currentDate) continue;
+
+        const lineWithoutDateTime = line
+            .replace(dateRegex, ' ')
+            .replace(timeRegex, ' ');
+
+        // Extract amounts: prefer "원"-suffixed amounts, fallback to all numbers
+        const amounts = [];
+        const wonAmountRegex = /([\d,]+)\s*원/g;
+        let match;
+        while ((match = wonAmountRegex.exec(lineWithoutDateTime)) !== null) {
+            amounts.push(parseInt(match[1].replace(/,/g, '')) || 0);
+        }
+        if (amounts.length < 2) {
+            const tempRegex = new RegExp(amountRegex.source, 'g');
+            while ((match = tempRegex.exec(lineWithoutDateTime)) !== null) {
+                amounts.push(parseInt(match[1].replace(/,/g, '')) || 0);
+            }
+        }
+
+        if (amounts.length < 2) continue;
+
+        let depositAmount = 0;
+        let withdrawalAmount = 0;
+        let memo = '';
+
+        const lowerLine = line.toLowerCase();
+
+        if (lowerLine.includes('입금') || lowerLine.includes('deposit')) {
+            const depositIdx = line.indexOf('입금') !== -1 ? line.indexOf('입금') : line.toLowerCase().indexOf('deposit');
+            const afterDeposit = line.substring(depositIdx);
+            const depositWonAmounts = [];
+            let dMatch;
+            const dWonRegex = /([\d,]+)\s*원/g;
+            while ((dMatch = dWonRegex.exec(afterDeposit)) !== null) {
+                depositWonAmounts.push(parseInt(dMatch[1].replace(/,/g, '')) || 0);
+            }
+            if (depositWonAmounts.length > 0) {
+                depositAmount = depositWonAmounts[0];
+            } else {
+                const dRegex = new RegExp(amountRegex.source, 'g');
+                while ((dMatch = dRegex.exec(afterDeposit)) !== null) {
+                    depositWonAmounts.push(parseInt(dMatch[1].replace(/,/g, '')) || 0);
+                }
+                depositAmount = depositWonAmounts.length > 0 ? depositWonAmounts[0] : 0;
+            }
+        }
+
+        if (lowerLine.includes('출금') || lowerLine.includes('withdraw')) {
+            const withdrawIdx = line.indexOf('출금') !== -1 ? line.indexOf('출금') : line.toLowerCase().indexOf('withdraw');
+            const afterWithdraw = line.substring(withdrawIdx);
+            const withdrawWonAmounts = [];
+            let wMatch;
+            const wWonRegex = /([\d,]+)\s*원/g;
+            while ((wMatch = wWonRegex.exec(afterWithdraw)) !== null) {
+                withdrawWonAmounts.push(parseInt(wMatch[1].replace(/,/g, '')) || 0);
+            }
+            if (withdrawWonAmounts.length > 0) {
+                withdrawalAmount = withdrawWonAmounts[0];
+            } else {
+                const wRegex = new RegExp(amountRegex.source, 'g');
+                while ((wMatch = wRegex.exec(afterWithdraw)) !== null) {
+                    withdrawWonAmounts.push(parseInt(wMatch[1].replace(/,/g, '')) || 0);
+                }
+                withdrawalAmount = withdrawWonAmounts.length > 0 ? withdrawWonAmounts[0] : 0;
+            }
+        }
+
+        // Fallback: position-based heuristics (출금액, 입금액, 잔액)
+        if (depositAmount === 0 && withdrawalAmount === 0 && amounts.length >= 2) {
+            if (amounts.length >= 3) {
+                if (amounts[0] === 0 && amounts[1] > 0) {
+                    withdrawalAmount = 0;
+                    depositAmount = amounts[1];
+                } else if (amounts[0] > 0 && amounts[1] === 0) {
+                    withdrawalAmount = amounts[0];
+                    depositAmount = 0;
+                } else {
+                    withdrawalAmount = amounts[0];
+                    depositAmount = amounts[1];
+                }
+            } else if (amounts[0] > 0 && amounts[1] === 0) {
+                depositAmount = amounts[0];
+                withdrawalAmount = 0;
+            } else if (amounts[0] === 0 && amounts[1] > 0) {
+                depositAmount = 0;
+                withdrawalAmount = amounts[1];
+            } else if (amounts[0] > 0 && amounts[1] > 0) {
+                depositAmount = amounts[0];
+                withdrawalAmount = amounts[1];
+            }
+        }
+
+        memo = line
+            .replace(dateRegex, '')
+            .replace(timeRegex, '')
+            .replace(/[\d,]+/g, '')
+            .replace(/입금|출금|원/g, '')
+            .trim()
+            .substring(0, 100);
+
+        if (depositAmount > 0 || withdrawalAmount > 0) {
+            rows.push({
+                date: currentDate,
+                time: currentTime || '',
+                memo: memo,
+                in: depositAmount,
+                out: withdrawalAmount
             });
         }
     }
 
-    // Update last_synced_at
-    db.run(`UPDATE bank_accounts SET last_synced_at = datetime('now') WHERE id = ?`, [accountId]);
+    return rows;
+}
 
-    return c.json({ synced: savedCount, total: transactions.length });
-});
-
-// OB-9. 수동 동기화 + 자동 매칭
-app.post('/api/openbank/sync', async (c) => {
-    const userId = c.req.query('user_id');
-
-    // Get unprocessed deposits
-    const unprocessed = await new Promise((resolve) => {
-        db.all(
-            `SELECT * FROM bank_transactions WHERE user_id = ? AND is_processed = 0 AND tran_type = '입금' ORDER BY tran_date ASC, tran_time ASC`,
-            [userId],
-            (err, rows) => resolve(rows || [])
-        );
-    });
-
-    // Get active contracts for matching
-    const contracts = await new Promise((resolve) => {
-        db.all(
-            `SELECT c.*, u.nickname, r.room_number, b.name as building,
-                    GROUP_CONCAT(ck.keyword) as keywords
-             FROM contracts c
-             LEFT JOIN users u ON c.tenant_id = u.id
-             LEFT JOIN rooms r ON c.room_id = r.id
-             LEFT JOIN buildings b ON r.building_id = b.id
-             LEFT JOIN contract_keywords ck ON c.id = ck.contract_id
-             WHERE c.tenant_id IS NOT NULL
-             GROUP BY c.id`,
-            [],
-            (err, rows) => resolve(rows || [])
-        );
-    });
-
-    const results = [];
-    for (const tran of unprocessed) {
-        const memo = tran.memo || '';
-        const tokens = memo.split(/\s+/).filter(t => t.length > 0);
-        const keyword = tokens.length > 0 ? tokens[tokens.length - 1] : '';
-
-        // Score matching (same logic as payments_keyword.html)
-        let bestContract = null;
-        let bestScore = 0;
-        for (const contract of contracts) {
-            let score = 0;
-            const cKeywords = contract.keywords ? contract.keywords.split(',') : [];
-            tokens.forEach(k => {
-                if (cKeywords.includes(k)) score += 100;
-                if (contract.nickname && contract.nickname.includes(k)) score += 10;
-                if (String(contract.room_number).includes(k)) score += 10;
-            });
-            if (score > bestScore) { bestScore = score; bestContract = contract; }
-        }
-
-        if (bestContract && bestScore >= 100) {
-            // Auto-allocate
-            const allocResult = await autoAllocatePayment(bestContract.id, tran.amount, `${tran.tran_date}T${tran.tran_time || '12:00'}`, memo);
-            db.run(`UPDATE bank_transactions SET is_processed = 1, payment_id = ? WHERE id = ?`, [allocResult.paymentId, tran.id]);
-            results.push({ tran_id: tran.id, matched: true, contract_id: bestContract.id, payment_id: allocResult.paymentId });
-        } else {
-            results.push({ tran_id: tran.id, matched: false, reason: 'low_score', score: bestScore });
-        }
-    }
-
-    return c.json({ results });
-});
-
-// OB-10. 동기화 상태 조회
-app.get('/api/openbank/sync/status', async (c) => {
-    const userId = c.req.query('user_id');
-
-    const accounts = await new Promise((resolve) => {
-        db.all(`SELECT id, bank_name, account_alias, sync_interval, last_synced_at FROM bank_accounts WHERE user_id = ?`, [userId], (err, rows) => resolve(rows || []));
-    });
-
-    const unprocessedCount = await new Promise((resolve) => {
-        db.get(`SELECT COUNT(*) as count FROM bank_transactions WHERE user_id = ? AND is_processed = 0 AND tran_type = '입금'`, [userId], (err, r) => resolve(r ? r.count : 0));
-    });
-
-    const hasToken = await new Promise((resolve) => {
-        db.get(`SELECT id FROM bank_tokens WHERE user_id = ? ORDER BY id DESC LIMIT 1`, [userId], (err, r) => resolve(!!r));
-    });
-
-    return c.json({ accounts, unprocessed_count: unprocessedCount, has_token: hasToken });
-});
-
-// OB-11. 수동 결제 추가 (건물/호수/날짜/금액 + 자동 재배정)
+// 수동 결제 추가 (건물/호수/날짜/금액 + 자동 재배정)
 app.post('/api/payments/manual', async (c) => {
     const body = await getBodySafely(c);
     const { user_id, contract_id, paid_at, amount, memo } = body;

@@ -3357,18 +3357,31 @@ app.post('/api/payments/allocate', async (c) => {
                     if (hasError) return;
 
                     const updateInvoiceStatus = (invId) => {
-                        // Check total amount paid for this invoice
+                        // Check total amount paid and latest payment date for this invoice
                         const statusQuery = `
 SELECT
-i.amount as due,
-    COALESCE(SUM(pa.amount), 0) as paid
+    i.amount as due,
+    i.billing_month,
+    COALESCE(SUM(pa.amount), 0) as paid,
+    MAX(p.paid_at) as last_paid_at
                             FROM invoices i
                             LEFT JOIN payment_allocation pa ON i.id = pa.invoice_id
+                            LEFT JOIN payments p ON pa.payment_id = p.id
                             WHERE i.id = ?
     `;
                         db.get(statusQuery, [invId], (err, row) => {
                             if (err || !row) return;
-                            const newStatus = (row.paid >= row.due) ? '완납' : '부분납부';
+                            let newStatus;
+                            if (row.paid >= row.due) {
+                                // 완납 - 청구월 기준 선납/후납 구분
+                                const billingMonth = row.billing_month || ''; // e.g. "2024-04"
+                                const paidMonth = row.last_paid_at ? row.last_paid_at.substring(0, 7) : ''; // e.g. "2024-03"
+                                if (paidMonth < billingMonth) newStatus = '완납(선납)';
+                                else if (paidMonth > billingMonth) newStatus = '완납(후납)';
+                                else newStatus = '완납';
+                            } else {
+                                newStatus = '부분납부';
+                            }
                             db.run("UPDATE invoices SET status = ? WHERE id = ?", [newStatus, invId]);
                         });
                     };
