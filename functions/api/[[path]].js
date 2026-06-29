@@ -1,10 +1,7 @@
-
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { handle } from 'hono/cloudflare-pages';
-// multer removed for R2
-// path omitted
 // multer removed for R2
 // path omitted
 import { initDb } from './db.mjs';
@@ -15,12 +12,48 @@ let db; // will be initialized
 
 
 
-;
 
 
-const app = new Hono();
-app.use('*', logger());
-app.use('*', cors());
+const _honoApp = new Hono();
+_honoApp.use('*', logger());
+_honoApp.use('*', cors());
+
+const app = {
+    get: (path, handler) => _honoApp.get(path, wrap(handler)),
+    post: (path, handler) => _honoApp.post(path, wrap(handler)),
+    put: (path, handler) => _honoApp.put(path, wrap(handler)),
+    delete: (path, handler) => _honoApp.delete(path, wrap(handler)),
+    use: (...args) => _honoApp.use(...args)
+};
+
+function wrap(handler) {
+    return async (c) => {
+        return new Promise(async (resolve) => {
+             const originalJson = c.json.bind(c);
+             c.json = (...args) => {
+                 const response = originalJson(...args);
+                 resolve(response);
+                 return response;
+             };
+             const originalText = c.text.bind(c);
+             c.text = (...args) => {
+                 const response = originalText(...args);
+                 resolve(response);
+                 return response;
+             };
+             
+             try {
+                 const result = await handler(c);
+                 if (result !== undefined) {
+                     resolve(result);
+                 }
+             } catch (e) {
+                 console.error('Route error:', e);
+                 resolve(originalJson({error: e.message}, 500));
+             }
+        });
+    };
+}
 
 const PORT = 3000;
 
@@ -2622,7 +2655,7 @@ app.get('/api/contract/:id/full-details', async (c) => {
         FROM contracts c
         JOIN rooms r ON c.room_id = r.id
         JOIN buildings b ON r.building_id = b.id
-        JOIN users u1 ON c.tenant_id = u1.id
+        LEFT JOIN users u1 ON c.tenant_id = u1.id
         WHERE c.id = ?
     `;
     db.get(query, [contractId], (err, row) => {
@@ -3306,9 +3339,9 @@ app.post('/api/payments/allocate', async (c) => {
       }
   }
 
-    const { contract_id, amount, paid_at, memo, allocations } = req.body;
+    const { contract_id, amount, paid_at, memo } = req.body;
 
-    if (!contract_id || !amount || !allocations) {
+    if (!contract_id || amount === undefined) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -3316,12 +3349,11 @@ app.post('/api/payments/allocate', async (c) => {
         db.run("BEGIN TRANSACTION");
 
         // 1. Create the Payment record
-        // Determine type based on dominant allocation or generic? Let's use Rent as default
-        const mainType = allocations.length > 0 ? allocations[0].type : 'monthly_rent';
+        const mainType = 'monthly_rent';
 
         db.run(
             `INSERT INTO payments(contract_id, amount, paid_at, memo, type) VALUES(?, ?, ?, ?, ?)`,
-            [contract_id, amount, paid_at, memo, mainType],
+            [contract_id, amount, paid_at, memo || '', mainType],
             function (err) {
                 if (err) {
                     db.run("ROLLBACK");
@@ -3329,95 +3361,134 @@ app.post('/api/payments/allocate', async (c) => {
                 }
 
                 const paymentId = this.lastID;
-                let processedCount = 0;
-                let hasError = false;
 
-                if (allocations.length === 0) {
-                    db.run("COMMIT");
-                    return res.json({ message: 'Payment saved with no allocations', paymentId });
-                }
+                // 2. FIFO Reallocation
+                db.run(
+                    `DELETE FROM payment_allocation WHERE invoice_id IN (SELECT id FROM invoices WHERE contract_id = ?)`,
+                    [contract_id],
+                    (err) => {
+                        if (err) {
+                            db.run("ROLLBACK");
+                            return res.status(500).json({ error: err.message });
+                        }
 
-                allocations.forEach(alloc => {
-                    if (hasError) return;
-
-                    const updateInvoiceStatus = (invId) => {
-                        // Check total amount paid for this invoice
-                        const statusQuery = `
-SELECT
-i.amount as due,
-    COALESCE(SUM(pa.amount), 0) as paid
-                            FROM invoices i
-                            LEFT JOIN payment_allocation pa ON i.id = pa.invoice_id
-                            WHERE i.id = ?
-    `;
-                        db.get(statusQuery, [invId], (err, row) => {
-                            if (err || !row) return;
-                            const newStatus = (row.paid >= row.due) ? '완납' : '부분납부';
-                            db.run("UPDATE invoices SET status = ? WHERE id = ?", [newStatus, invId]);
-                        });
-                    };
-
-                    const proceedWithAllocation = (invoiceId) => {
-                        db.run(
-                            `INSERT INTO payment_allocation(payment_id, invoice_id, amount) VALUES(?, ?, ?)`,
-                            [paymentId, invoiceId, alloc.amount],
-                            (err) => {
+                        db.all(
+                            `SELECT id, type, billing_month, amount as due_amount
+                             FROM invoices
+                             WHERE contract_id = ?
+                             ORDER BY CASE WHEN type = 'deposit' THEN 0 ELSE 1 END, billing_month ASC`,
+                            [contract_id],
+                            (err, invoices) => {
                                 if (err) {
-                                    hasError = true;
                                     db.run("ROLLBACK");
                                     return res.status(500).json({ error: err.message });
                                 }
 
-                                updateInvoiceStatus(invoiceId);
-
-                                processedCount++;
-                                if (processedCount === allocations.length && !hasError) {
-                                    db.run("COMMIT");
-                                    res.json({ message: 'Payment allocated successfully', paymentId });
-                                }
-                            }
-                        );
-                    };
-
-                    if (!alloc.invoice_id) {
-                        // Check if an invoice with same type/month already exists for this contract
-                        // To avoid racing in the loop, we check before insert
-                        db.get(
-                            "SELECT id FROM invoices WHERE contract_id = ? AND type = ? AND billing_month = ?",
-                            [contract_id, alloc.type, alloc.bill_month],
-                            (err, existing) => {
-                                if (err) {
-                                    hasError = true;
-                                    db.run("ROLLBACK");
-                                    return res.status(500).json({ error: err.message });
-                                }
-
-                                if (existing) {
-                                    proceedWithAllocation(existing.id);
-                                } else {
-                                    // Create NEW invoice
-                                    const dueAmount = alloc.due_total || alloc.amount;
-                                    const initialStatus = (alloc.amount >= dueAmount) ? '완납' : '부분납부';
-
-                                    db.run(
-                                        `INSERT INTO invoices(contract_id, type, billing_month, amount, status, due_date) VALUES(?, ?, ?, ?, ?, ?)`,
-                                        [contract_id, alloc.type, alloc.bill_month, dueAmount, initialStatus, alloc.due_date],
-                                        function (err) {
-                                            if (err) {
-                                                hasError = true;
-                                                db.run("ROLLBACK");
-                                                return res.status(500).json({ error: err.message });
-                                            }
-                                            proceedWithAllocation(this.lastID);
+                                db.all(
+                                    `SELECT id, amount, paid_at FROM payments
+                                     WHERE contract_id = ?
+                                     ORDER BY paid_at ASC, id ASC`,
+                                    [contract_id],
+                                    (err, payments) => {
+                                        if (err) {
+                                            db.run("ROLLBACK");
+                                            return res.status(500).json({ error: err.message });
                                         }
-                                    );
-                                }
+
+                                        let invoiceIdx = 0;
+                                        const invStatusMap = {};
+                                        for (const inv of invoices) {
+                                            invStatusMap[inv.id] = { paid: 0, last_paid_at: null };
+                                        }
+
+                                        const insertAllocations = [];
+                                        
+                                        for (const p of payments) {
+                                            let remaining = p.amount;
+                                            while (remaining > 0 && invoiceIdx < invoices.length) {
+                                                const inv = invoices[invoiceIdx];
+                                                const owed = inv.due_amount - invStatusMap[inv.id].paid;
+                                                
+                                                if (owed <= 0) {
+                                                    invoiceIdx++;
+                                                    continue;
+                                                }
+
+                                                const alloc = Math.min(remaining, owed);
+                                                
+                                                insertAllocations.push({ payment_id: p.id, invoice_id: inv.id, amount: alloc });
+
+                                                invStatusMap[inv.id].paid += alloc;
+                                                invStatusMap[inv.id].last_paid_at = p.paid_at;
+                                                remaining -= alloc;
+
+                                                if (invStatusMap[inv.id].paid >= inv.due_amount) {
+                                                    invoiceIdx++;
+                                                }
+                                            }
+                                        }
+
+                                        let allocIdx = 0;
+                                        const doInsertAlloc = () => {
+                                            if (allocIdx >= insertAllocations.length) {
+                                                updateInvoiceStatuses();
+                                                return;
+                                            }
+                                            const alloc = insertAllocations[allocIdx];
+                                            db.run(
+                                                `INSERT INTO payment_allocation(payment_id, invoice_id, amount) VALUES(?, ?, ?)`,
+                                                [alloc.payment_id, alloc.invoice_id, alloc.amount],
+                                                (err) => {
+                                                    if (err) {
+                                                        db.run("ROLLBACK");
+                                                        return res.status(500).json({ error: err.message });
+                                                    }
+                                                    allocIdx++;
+                                                    doInsertAlloc();
+                                                }
+                                            );
+                                        };
+
+                                        const updateInvoiceStatuses = () => {
+                                            let invIdx = 0;
+                                            const doUpdateStatus = () => {
+                                                if (invIdx >= invoices.length) {
+                                                    db.run("COMMIT");
+                                                    return res.json({ message: 'Payment saved and reallocated', paymentId });
+                                                }
+                                                const inv = invoices[invIdx];
+                                                const stats = invStatusMap[inv.id];
+                                                let newStatus;
+                                                if (stats.paid >= inv.due_amount) {
+                                                    const billingMonth = inv.billing_month || '';
+                                                    const paidMonth = stats.last_paid_at ? stats.last_paid_at.substring(0, 7) : '';
+                                                    if (paidMonth < billingMonth) newStatus = '완납(선납)';
+                                                    else if (paidMonth > billingMonth) newStatus = '완납(후납)';
+                                                    else newStatus = '완납';
+                                                } else if (stats.paid > 0) {
+                                                    newStatus = '부분납부';
+                                                } else {
+                                                    newStatus = '정산대기';
+                                                }
+                                                db.run(`UPDATE invoices SET status = ? WHERE id = ?`, [newStatus, inv.id], (err) => {
+                                                    if (err) {
+                                                        db.run("ROLLBACK");
+                                                        return res.status(500).json({ error: err.message });
+                                                    }
+                                                    invIdx++;
+                                                    doUpdateStatus();
+                                                });
+                                            };
+                                            doUpdateStatus();
+                                        };
+
+                                        doInsertAlloc();
+                                    }
+                                );
                             }
                         );
-                    } else {
-                        proceedWithAllocation(alloc.invoice_id);
                     }
-                });
+                );
             }
         );
     });
@@ -4304,6 +4375,83 @@ app.post('/api/users/quick', async (c) => {
             });
         }
     });
+});
+
+
+// 19b. Update Tenant Keywords
+app.put('/api/tenants/:id/keywords', async (c) => {
+  const req = {
+    query: c.req.query(),
+    params: c.req.param(),
+    body: {}, 
+    files: []
+  };
+  const res = {
+    status: function(code) { this.statusCode = code; return this; },
+    json: function(data) { return c.json(data, this.statusCode || 200); },
+    download: function(path, filename) { return c.text('Download not supported on Workers', 501); }
+  };
+  req.body = await getBodySafely(c);
+
+    const tenantId = req.params.id;
+    const { keywords } = req.body;
+    
+    if (!Array.isArray(keywords)) return res.status(400).json({ error: 'Keywords must be an array' });
+
+    db.all('SELECT id FROM contracts WHERE tenant_id = ?', [tenantId], (err, contracts) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!contracts || contracts.length === 0) {
+            return res.json({ message: 'No active contracts found for this tenant. Keywords cannot be saved yet.' });
+        }
+
+        const contractIds = contracts.map(c => c.id);
+        const placeholders = contractIds.map(() => '?').join(',');
+        
+        db.run(`DELETE FROM contract_keywords WHERE contract_id IN (${placeholders})`, contractIds, (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+
+            if (keywords.length === 0) return res.json({ message: 'Keywords cleared' });
+
+            let insertQuery = 'INSERT INTO contract_keywords (contract_id, keyword) VALUES ';
+            let insertValues = [];
+            let insertPlaceholders = [];
+
+            contracts.forEach(c => {
+                keywords.forEach(k => {
+                    const trimmed = String(k).trim();
+                    if (trimmed) {
+                        insertPlaceholders.push('(?, ?)');
+                        insertValues.push(c.id, trimmed);
+                    }
+                });
+            });
+
+            if (insertPlaceholders.length === 0) return res.json({ message: 'No valid keywords provided' });
+
+            insertQuery += insertPlaceholders.join(', ');
+            db.run(insertQuery, insertValues, (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ message: 'Keywords updated successfully' });
+            });
+        });
+    });
+});
+// 20b. Get All Tenants
+app.get('/api/tenants/all-list', async (c) => {
+  const req = { query: c.req.query(), params: c.req.param(), body: {}, files: [] };
+  const res = {
+    status: function(code) { this.statusCode = code; return this; },
+    json: function(data) { return c.json(data, this.statusCode || 200); },
+    download: function(path, filename) { return c.text('Download not supported on Workers', 501); }
+  };
+  req.body = await getBodySafely(c);
+  req.files = c.req.rawFiles || [];
+  req.file = req.files[0] || null;
+
+  db.all("SELECT id, nickname, birth_date, phone_number FROM users WHERE role = 'tenant' AND status != '종료'", [], (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+  });
 });
 
 // 20a. Search Tenants by Keyword (Active Contracts)
@@ -5663,12 +5811,73 @@ function syncContractInvoices(contractId, callback) {
                 const dd = String(d.getDate()).padStart(2, '0');
                 const billingMonth = `${yyyy}-${mm}`;
                 const dueDateStr = `${yyyy}-${mm}-${dd}`;
+                const totalAmount = (monthly_rent || 0) + (maintenance_fee || 0);
+
+                if (totalAmount > 0) {
+                    // Check if invoice exists for this month and type
+                    // Note: In serialize, these run sequentially
+                    db.get("SELECT id FROM invoices WHERE contract_id = ? AND billing_month = ? AND type = 'monthly_rent'",
+                        [contractId, billingMonth], (err, row) => {
+                            if (!row) {
+                                db.run("INSERT INTO invoices (contract_id, type, billing_month, due_date, amount, status) VALUES (?, 'monthly_rent', ?, ?, ?, '정산대기')",
+                                    [contractId, billingMonth, dueDateStr, totalAmount]);
+                            }
+                        });
+                }
+                currentDueDate.setMonth(currentDueDate.getMonth() + 1);
             }
         });
 
         if (callback) callback(null);
     });
 }
+
+// ============================================================
+// OPEN BANKING API ENDPOINTS
+// ============================================================
+
+// OB-1. OAuth 인증 시작
+app.get('/api/openbank/authorize', async (c) => {
+    const clientId = c.env.OPENBANK_CLIENT_ID;
+    if (!clientId) return c.json({ error: 'Open Banking not configured' }, 500);
+    const redirectUri = `${new URL(c.req.url).origin}/api/openbank/callback`;
+    const state = crypto.randomUUID();
+    const userId = c.req.query('user_id');
+
+    // Save state + userId to DB for CSRF verification
+    db.run(
+        `INSERT INTO logs (related_table, related_id, memo) VALUES ('oauth_state', ?, ?)`,
+        [parseInt(userId) || 0, JSON.stringify({ state, user_id: userId, created: Date.now() })]
+    );
+
+    const authUrl = `https://testapi.openbanking.or.kr/oauth/2.0/authorize`
+        + `?response_type=code`
+        + `&client_id=${clientId}`
+        + `&redirect_uri=${encodeURIComponent(redirectUri)}`
+        + `&scope=login inquiry`
+        + `&state=${state}`
+        + `&auth_type=0`;
+
+    return c.redirect(authUrl);
+});
+
+// OB-2. OAuth 콜백
+app.get('/api/openbank/callback', async (c) => {
+    const code = c.req.query('code');
+    const state = c.req.query('state');
+    const error = c.req.query('error');
+
+    if (error) return c.json({ error: c.req.query('error_description') || error }, 400);
+
+    // Find state in logs to get userId
+    const stateRow = await new Promise((resolve) => {
+        db.get(
+            `SELECT id, memo FROM logs WHERE related_table = 'oauth_state' AND memo LIKE ? ORDER BY id DESC LIMIT 1`,
+            [`%"state":"${state}"%`],
+            (err, row) => resolve(row)
+        );
+    });
+});
 
 // app.listen removed - Cloudflare Workers uses onRequest export; Node.js uses server.js/server.mjs
 // PDF Import & Parsing Endpoint
@@ -6182,5 +6391,5 @@ export const onRequest = async (context) => {
   if (!db) {
     db = initDb(env.DATABASE_URL);
   }
-  return handle(app)(context);
+  return handle(_honoApp)(context);
 };

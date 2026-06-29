@@ -158,7 +158,7 @@ function renderNavbar() {
                         ${user.role === 'admin' ? '<a href="/landlord_management.html">👑 임대인 관리</a>' : ''}
                         ${(user.role === 'landlord' || user.role === 'admin') ? '<a href="/buildings.html">🏢 건물 관리</a>' : ''}
                         ${(user.role === 'landlord' || user.role === 'admin') ? '<a href="/tenants.html">👥 세입자 관리</a>' : ''}
-                        ${user.role === 'admin' ? '<a href="/contracts.html">📄 계약 관리</a>' : ''}
+                        ${(user.role === 'landlord' || user.role === 'admin') ? '<a href="/contracts.html">📄 계약 관리</a>' : ''}
                         ${(user.role === 'landlord' || user.role === 'admin') ? '<a href="/payments.html">💰 납부 관리</a>' : ''}
                         <hr>
                         ${(user.role === 'landlord' || user.role === 'admin') ? '<a href="/room_adv.html">🏠 방 내놓기</a>' : ''}

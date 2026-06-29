@@ -19,7 +19,7 @@ const PORT = 3000;
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(cors());
-app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static('uploads'));
 
 // Multer setup for photo uploads
@@ -1661,7 +1661,7 @@ app.get('/api/contract/:id/full-details', (req, res) => {
         FROM contracts c
         JOIN rooms r ON c.room_id = r.id
         JOIN buildings b ON r.building_id = b.id
-        JOIN users u1 ON c.tenant_id = u1.id
+        LEFT JOIN users u1 ON c.tenant_id = u1.id
         WHERE c.id = ?
     `;
     db.get(query, [contractId], (err, row) => {
@@ -2103,83 +2103,91 @@ app.post('/api/payments/allocate', (req, res) => {
                     }
                     const paymentId = this.lastID;
 
-                    // 2. Get invoices: 보증금 먼저, 월세는 청구월 순서
-                    db.all(
-                        `SELECT id, type, billing_month, amount as due_amount, due_date,
-                                COALESCE((SELECT SUM(pa.amount) FROM payment_allocation pa WHERE pa.invoice_id = invoices.id), 0) as paid_amount
-                         FROM invoices WHERE contract_id = ?
-                         ORDER BY CASE WHEN type = 'deposit' THEN 0 ELSE 1 END, billing_month ASC`,
-                        [contract_id],
-                        (err2, invoices) => {
-                            if (err2) {
-                                db.run("ROLLBACK");
-                                return res.status(500).json({ error: err2.message });
-                            }
+                    // 2. Clear existing payment_allocation for this contract
+                    db.run(`DELETE FROM payment_allocation WHERE invoice_id IN (SELECT id FROM invoices WHERE contract_id = ?)`, [contract_id], function(err2) {
+                        if (err2) { db.run("ROLLBACK"); return res.status(500).json({ error: err2.message }); }
 
-                            let remaining = amount;
-                            const allocResults = [];
-                            let processed = 0;
-                            const totalInvoices = invoices.length;
+                        // 3. Fetch all invoices
+                        db.all(`SELECT id, type, billing_month, amount as due_amount FROM invoices WHERE contract_id = ? ORDER BY CASE WHEN type = 'deposit' THEN 0 ELSE 1 END, billing_month ASC`, [contract_id], (err3, invoices) => {
+                            if (err3) { db.run("ROLLBACK"); return res.status(500).json({ error: err3.message }); }
 
-                            if (totalInvoices === 0) {
-                                db.run("COMMIT");
-                                return res.json({ message: 'Payment saved, no invoices to allocate', paymentId, allocations: [] });
-                            }
+                            // 4. Fetch all payments
+                            db.all(`SELECT id, amount, paid_at FROM payments WHERE contract_id = ? ORDER BY paid_at ASC, id ASC`, [contract_id], (err4, payments) => {
+                                if (err4) { db.run("ROLLBACK"); return res.status(500).json({ error: err4.message }); }
 
-                            // Pre-calculate allocations synchronously to avoid race conditions
-                            const allocPlan = [];
-                            let planRemaining = amount;
-                            for (const inv of invoices) {
-                                if (planRemaining <= 0) break;
-                                const owed = inv.due_amount - inv.paid_amount;
-                                if (owed <= 0) continue;
-                                const allocate = Math.min(planRemaining, owed);
-                                allocPlan.push({ inv, allocate });
-                                planRemaining -= allocate;
-                            }
+                                // 5. Memory Allocation
+                                let invoiceIdx = 0;
+                                const invStatusMap = {};
+                                for (const inv of invoices) {
+                                    invStatusMap[inv.id] = { paid: 0, last_paid_at: null };
+                                }
+                                const allocPlan = [];
+                                for (const p of payments) {
+                                    let remaining = p.amount;
+                                    while (remaining > 0 && invoiceIdx < invoices.length) {
+                                        const inv = invoices[invoiceIdx];
+                                        const owed = inv.due_amount - invStatusMap[inv.id].paid;
+                                        if (owed <= 0) { invoiceIdx++; continue; }
+                                        const alloc = Math.min(remaining, owed);
+                                        allocPlan.push([p.id, inv.id, alloc]);
+                                        invStatusMap[inv.id].paid += alloc;
+                                        invStatusMap[inv.id].last_paid_at = p.paid_at;
+                                        remaining -= alloc;
+                                        if (invStatusMap[inv.id].paid >= inv.due_amount) invoiceIdx++;
+                                    }
+                                }
 
-                            if (allocPlan.length === 0) {
-                                db.run("COMMIT");
-                                return res.json({ message: 'Payment saved, no invoices to allocate', paymentId, allocations: [] });
-                            }
+                                // 6. Insert allocations
+                                let allocCount = 0;
+                                if (allocPlan.length === 0) {
+                                    finishUpdates();
+                                } else {
+                                    for (const plan of allocPlan) {
+                                        db.run(`INSERT INTO payment_allocation(payment_id, invoice_id, amount) VALUES(?, ?, ?)`, plan, (err5) => {
+                                            if (err5) { db.run("ROLLBACK"); return res.status(500).json({ error: err5.message }); }
+                                            allocCount++;
+                                            if (allocCount === allocPlan.length) finishUpdates();
+                                        });
+                                    }
+                                }
 
-                            let planProcessed = 0;
-                            allocPlan.forEach(({ inv, allocate }) => {
-                                db.run(
-                                    `INSERT INTO payment_allocation(payment_id, invoice_id, amount) VALUES(?, ?, ?)`,
-                                    [paymentId, inv.id, allocate],
-                                    (err3) => {
-                                        if (err3) {
-                                            db.run("ROLLBACK");
-                                            return res.status(500).json({ error: err3.message });
-                                        }
-
-                                        allocResults.push({ invoice_id: inv.id, type: inv.type, billing_month: inv.billing_month, amount: allocate });
-
-                                        // Update invoice status
-                                        const newPaid = inv.paid_amount + allocate;
-                                        let newStatus;
-                                        if (newPaid >= inv.due_amount) {
-                                            const billingMonth = inv.billing_month || '';
-                                            const paidMonth = paid_at ? paid_at.substring(0, 7) : '';
-                                            if (paidMonth < billingMonth) newStatus = '완납(선납)';
-                                            else if (paidMonth > billingMonth) newStatus = '완납(후납)';
-                                            else newStatus = '완납';
-                                        } else {
-                                            newStatus = '부분납부';
-                                        }
-                                        db.run("UPDATE invoices SET status = ? WHERE id = ?", [newStatus, inv.id]);
-
-                                        planProcessed++;
-                                        if (planProcessed === allocPlan.length) {
-                                            db.run("COMMIT");
-                                            res.json({ message: 'Payment allocated (auto FIFO)', paymentId, allocations: allocResults });
+                                function finishUpdates() {
+                                    let invCount = 0;
+                                    if (invoices.length === 0) {
+                                        db.run("COMMIT");
+                                        return res.json({ message: 'Payment allocated (chronological auto FIFO)', paymentId, allocations: [] });
+                                    } else {
+                                        let hasError = false;
+                                        for (const inv of invoices) {
+                                            if (hasError) return;
+                                            const stats = invStatusMap[inv.id];
+                                            let newStatus;
+                                            if (stats.paid >= inv.due_amount) {
+                                                const bMonth = inv.billing_month || '';
+                                                const pMonth = stats.last_paid_at ? stats.last_paid_at.substring(0, 7) : '';
+                                                if (pMonth < bMonth) newStatus = '완납(선납)';
+                                                else if (pMonth > bMonth) newStatus = '완납(후납)';
+                                                else newStatus = '완납';
+                                            } else if (stats.paid > 0) {
+                                                newStatus = '부분납부';
+                                            } else {
+                                                newStatus = '정산대기';
+                                            }
+                                            db.run(`UPDATE invoices SET status = ? WHERE id = ?`, [newStatus, inv.id], (err6) => {
+                                                if (hasError) return;
+                                                if (err6) { hasError = true; db.run("ROLLBACK"); return res.status(500).json({ error: err6.message }); }
+                                                invCount++;
+                                                if (invCount === invoices.length) {
+                                                    db.run("COMMIT");
+                                                    return res.json({ message: 'Payment allocated (chronological auto FIFO)', paymentId, allocations: [] });
+                                                }
+                                            });
                                         }
                                     }
-                                );
+                                }
                             });
-                        }
-                    );
+                        });
+                    });
                 }
             );
         });
@@ -2834,6 +2842,52 @@ app.post('/api/users/quick', (req, res) => {
     });
 });
 
+
+// 19b. Update Tenant Keywords
+app.put('/api/tenants/:id/keywords', (req, res) => {
+    const tenantId = req.params.id;
+    const { keywords } = req.body;
+    
+    if (!Array.isArray(keywords)) return res.status(400).json({ error: 'Keywords must be an array' });
+
+    db.all('SELECT id FROM contracts WHERE tenant_id = ? AND status = \'active\'', [tenantId], (err, contracts) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!contracts || contracts.length === 0) {
+            return res.json({ message: 'No active contracts found for this tenant. Keywords cannot be saved yet.' });
+        }
+
+        const contractIds = contracts.map(c => c.id);
+        const placeholders = contractIds.map(() => '?').join(',');
+        
+        db.run(`DELETE FROM contract_keywords WHERE contract_id IN (${placeholders})`, contractIds, (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+
+            if (keywords.length === 0) return res.json({ message: 'Keywords cleared' });
+
+            let insertQuery = 'INSERT INTO contract_keywords (contract_id, keyword) VALUES ';
+            let insertValues = [];
+            let insertPlaceholders = [];
+
+            contracts.forEach(c => {
+                keywords.forEach(k => {
+                    const trimmed = String(k).trim();
+                    if (trimmed) {
+                        insertPlaceholders.push('(?, ?)');
+                        insertValues.push(c.id, trimmed);
+                    }
+                });
+            });
+
+            if (insertPlaceholders.length === 0) return res.json({ message: 'No valid keywords provided' });
+
+            insertQuery += insertPlaceholders.join(', ');
+            db.run(insertQuery, insertValues, (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ message: 'Keywords updated successfully' });
+            });
+        });
+    });
+});
 // 20a. Search Tenants by Keyword (Active Contracts)
 app.get('/api/tenants/search', (req, res) => {
     const { keyword, landlord_id } = req.query;
@@ -3597,4 +3651,62 @@ const server = app.listen(PORT, () => {
     } else {
         console.error('Server error:', err);
     }
+});
+
+// 47. Sync Contract Keywords for a Tenant (All contracts)
+app.put('/api/tenants/:id/keywords', async (req, res) => {
+  const tenantId = parseInt(req.params.id);
+  const { keywords } = req.body;
+
+  if (!Array.isArray(keywords)) {
+      return res.status(400).json({ error: 'Keywords must be an array' });
+  }
+
+  // Find all contracts for this tenant
+  db.all("SELECT id FROM contracts WHERE tenant_id = ?", [tenantId], (err, contracts) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!contracts || contracts.length === 0) return res.status(404).json({ error: 'No contract found for this tenant.' });
+
+      const contractIds = contracts.map(c => c.id);
+      const validKeywords = [...new Set(keywords.map(k => String(k).trim()).filter(k => k))];
+
+      let completedContracts = 0;
+      let hasError = false;
+
+      contractIds.forEach(contractId => {
+          db.run("DELETE FROM contract_keywords WHERE contract_id = ?", [contractId], (err) => {
+              if (hasError) return;
+              if (err) {
+                  hasError = true;
+                  return res.status(500).json({ error: err.message });
+              }
+              
+              if (validKeywords.length === 0) {
+                  completedContracts++;
+                  if (completedContracts === contractIds.length && !hasError) {
+                      return res.json({ message: 'Keywords cleared', keywords: [] });
+                  }
+                  return;
+              }
+
+              let completedKeywords = 0;
+              validKeywords.forEach(k => {
+                  db.run("INSERT INTO contract_keywords (contract_id, keyword) VALUES (?, ?)", [contractId, k], (err) => {
+                      if (hasError) return;
+                      if (err) {
+                          hasError = true;
+                          return res.status(500).json({ error: 'Some keywords failed to save' });
+                      }
+                      completedKeywords++;
+                      if (completedKeywords === validKeywords.length) {
+                          completedContracts++;
+                          if (completedContracts === contractIds.length && !hasError) {
+                              res.json({ message: 'Keywords updated', count: completedKeywords, keywords: validKeywords });
+                          }
+                      }
+                  });
+              });
+          });
+      });
+  });
 });

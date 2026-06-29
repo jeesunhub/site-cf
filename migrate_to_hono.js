@@ -14,17 +14,58 @@ code = code.replace(/const cors = require\('cors'\);/g, "");
 
 // 2. Fix variable instantiations
 code = code.replace(/const app = express\(\);/g, `
-const app = new Hono().basePath('/api');
-app.use('*', logger());
-app.use('*', cors());
+const _honoApp = new Hono();
+_honoApp.use('*', logger());
+_honoApp.use('*', cors());
+
+const app = {
+    get: (path, handler) => _honoApp.get(path, wrap(handler)),
+    post: (path, handler) => _honoApp.post(path, wrap(handler)),
+    put: (path, handler) => _honoApp.put(path, wrap(handler)),
+    delete: (path, handler) => _honoApp.delete(path, wrap(handler)),
+    use: (...args) => _honoApp.use(...args)
+};
+
+function wrap(handler) {
+    return async (c) => {
+        return new Promise(async (resolve) => {
+             const originalJson = c.json.bind(c);
+             c.json = (...args) => {
+                 const response = originalJson(...args);
+                 resolve(response);
+                 return response;
+             };
+             const originalText = c.text.bind(c);
+             c.text = (...args) => {
+                 const response = originalText(...args);
+                 resolve(response);
+                 return response;
+             };
+             
+             try {
+                 const result = await handler(c);
+                 if (result !== undefined) {
+                     resolve(result);
+                 }
+             } catch (e) {
+                 console.error('Route error:', e);
+                 resolve(originalJson({error: e.message}, 500));
+             }
+        });
+    };
+}
 `);
 
 // Environment & FS fixes for Cloudflare
 code = code.replace(/process\.env\.RENDER/g, "false");
-code = code.replace(/process\.env\.DATABASE_URL/g, "c.env.DATABASE_URL");
+code = code.replace(/process\.env/g, "c.env");
 code = code.replace(/fs\.existsSync\(.*?\)/g, "false");
 code = code.replace(/fs\.readFileSync\(.*?\)/g, "''");
 code = code.replace(/fs\.mkdirSync\(.*?\)/g, "");
+
+// Remove process.on and process.exit
+code = code.replace(/process\.on\([\s\S]*?\}\);/g, "");
+code = code.replace(/process\.exit\(1\);/g, "");
 
 // Remove Multer configurations
 code = code.replace(/const storage = multer\.diskStorage\(\{[\s\S]*?\}\);/g, "/* multer storage removed */");
@@ -82,6 +123,9 @@ code = code.replace(/`\/ uploads \/ \$\{req\.file\.filename\} `/g, "(uploadedUrl
 code = code.replace(/fs\.copyFileSync\(.*?\);/g, "throw new Error('FileSystem operations not supported on Workers');");
 code = code.replace(/fs\.unlinkSync\(.*?\);/g, "");
 
+// Remove app.listen since Pages Handles it
+code = code.replace(/const server = app\.listen\([\s\S]*?\}\);/g, "");
+
 code += `
 
 // Helper to extract body in Hono safely without throwing for empty bodies
@@ -117,7 +161,7 @@ export const onRequest = async (context) => {
   if (!db) {
     db = initDb(env.DATABASE_URL);
   }
-  return handle(app)(context);
+  return handle(_honoApp)(context);
 };
 `;
 

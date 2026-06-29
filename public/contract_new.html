@@ -349,8 +349,10 @@
                         style="color: #ef4444; display: none;" onclick="deleteTenant()">임차인 삭제</button>
                 </div>
                 <div class="form-grid">
-                    <div class="form-group"><label>성명</label><input type="text" id="tenant-name"
-                            placeholder="세입자 이름을 입력하세요"></div>
+                    <div class="form-group"><label>성명</label>
+                        <input type="text" id="tenant-name" list="tenant-datalist" placeholder="세입자 이름을 입력하세요" oninput="autoFillTenant()">
+                        <datalist id="tenant-datalist"></datalist>
+                    </div>
                     <div class="form-group"><label>생년월일</label><input type="date" id="tenant-dob"></div>
                     <div class="form-group"><label>연락처</label><input type="tel" id="tenant-phone"
                             placeholder="010-0000-0000" oninput="this.value = formatPhone(this.value)"></div>
@@ -511,6 +513,7 @@
 
             await loadBuildings();
             await loadVacantPostings();
+            await loadAllTenants();
 
             // Pre-fill from URL params (e.g. from Text Extraction or Tenant Mgmt)
             const urlBuildingName = urlParams.get('building_name');
@@ -825,11 +828,10 @@
             currentTenantId = c.tenant_id;
             if (currentTenantId) document.getElementById('btn-delete-tenant').style.display = 'block';
 
-            document.getElementById('tenant-name').value = c.tenant_name;
-            document.getElementById('tenant-dob').value = c.birth_date;
-            document.getElementById('tenant-phone').value = formatPhone(c.phone_number);
-            document.getElementById('tenant-phone').value = formatPhone(c.phone_number);
-            document.getElementById('contract-building').value = c.building_id;
+            document.getElementById('tenant-name').value = c.tenant_name || '';
+            document.getElementById('tenant-dob').value = c.birth_date || '';
+            document.getElementById('tenant-phone').value = formatPhone(c.phone_number || '');
+            document.getElementById('contract-building').value = c.building_id || '';
             await loadRooms(c.room_number);
             document.getElementById('contract-start').value = c.contract_start_date ? c.contract_start_date.split('T')[0] : '';
             document.getElementById('contract-end').value = c.contract_end_date ? c.contract_end_date.split('T')[0] : '';
@@ -838,6 +840,37 @@
             document.getElementById('contract-rent').value = formatCurrency(c.monthly_rent);
             document.getElementById('contract-fee').value = formatCurrency(c.maintenance_fee);
             document.getElementById('contract-cleaning').value = formatCurrency(c.cleaning_fee || 0);
+        }
+
+        let allTenantsList = [];
+
+        async function loadAllTenants() {
+            try {
+                const res = await fetch('/api/tenants/all-list');
+                if (!res.ok) return;
+                allTenantsList = await res.json();
+                
+                const datalist = document.getElementById('tenant-datalist');
+                datalist.innerHTML = '';
+                allTenantsList.forEach(t => {
+                    const option = document.createElement('option');
+                    option.value = t.nickname;
+                    datalist.appendChild(option);
+                });
+            } catch (err) {
+                console.error('Failed to load all tenants', err);
+            }
+        }
+
+        function autoFillTenant() {
+            const name = document.getElementById('tenant-name').value.trim();
+            if (!name) return;
+            
+            const match = allTenantsList.find(t => t.nickname === name);
+            if (match) {
+                if (match.birth_date) document.getElementById('tenant-dob').value = match.birth_date;
+                if (match.phone_number) document.getElementById('tenant-phone').value = formatPhone(match.phone_number);
+            }
         }
 
         function addMonths(months) {
@@ -984,6 +1017,21 @@
                 let url = '/api/contracts/full';
                 let method = 'POST';
 
+                const rSelect = document.getElementById('contract-room');
+                let roomText = rSelect.options[rSelect.selectedIndex] ? rSelect.options[rSelect.selectedIndex].text : '';
+                if (roomText && roomText.includes('호')) {
+                    roomText = roomText.replace(/[^0-9]/g, '') + '호';
+                }
+                
+                const newKeywords = [data.tenant_name];
+                if (roomText && roomText !== '호') {
+                    newKeywords.push(roomText);
+                }
+                const totalMonthly = (data.monthly_rent || 0) + (data.management_fee || 0) + (data.cleaning_fee || 0);
+                if (totalMonthly > 0) {
+                    newKeywords.push(String(totalMonthly));
+                }
+
                 let payload = {
                     tenant_id: data.tenant_id,
                     landlord_id: data.landlord_id,
@@ -994,23 +1042,20 @@
                     monthly_rent: data.monthly_rent,
                     management_fee: data.management_fee,
                     cleaning_fee: data.cleaning_fee,
-                    room_id: data.room_id
+                    room_id: data.room_id,
+                    keywords: newKeywords // ⬅️ 계약 생성 시 키워드를 함께 전송
                 };
 
                 if (activeContractId) {
                     url = `/api/contracts/${activeContractId}`;
                     method = 'PUT';
-                    payload.keyword = data.tenant_name; // Maintain keyword on update
                 }
 
                 const contractRes = await fetch(url, {
-
                     method: method,
                     headers: {
                         'Content-Type': 'application/json'
-                    }
-
-                    ,
+                    },
                     body: JSON.stringify(payload)
                 });
 
@@ -1018,12 +1063,10 @@
                     if (isIframe) {
                         window.parent.postMessage('contract_saved', '*');
                     }
-
                     else {
-                        window.location.href = '/tenants.html';
+                        window.location.href = '/contracts.html';
                     }
                 }
-
                 else {
                     const errData = await contractRes.json();
                     alert('저장 실패: ' + (errData.error || '알 수 없는 오류'));

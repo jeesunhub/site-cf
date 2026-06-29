@@ -66,6 +66,17 @@ function queryDbSingle(sql, params = []) {
     });
 }
 
+function runDbCommand(sql, params = []) {
+    return new Promise((resolve, reject) => {
+        const db = new sqlite3.Database(DB_PATH);
+        db.run(sql, params, function(err) {
+            db.close();
+            if (err) reject(err);
+            else resolve(this);
+        });
+    });
+}
+
 // ===== API 호출 =====
 
 async function apiPost(path, body) {
@@ -88,6 +99,13 @@ async function testPaymentsForContract(contractPayments, index) {
     console.log(`\n${'═'.repeat(50)}`);
     console.log(`  계약 #${index} (ID: ${contract_id}): 결제 로직 검증`);
     console.log(`${'═'.repeat(50)}`);
+
+    // 기존 결제 데이터 초기화
+    await runDbCommand("DELETE FROM payment_allocation WHERE invoice_id IN (SELECT id FROM invoices WHERE contract_id = ?)", [contract_id]);
+    await runDbCommand("DELETE FROM payments WHERE contract_id = ?", [contract_id]);
+    await runDbCommand("UPDATE invoices SET status = '정산대기' WHERE contract_id = ?", [contract_id]);
+
+    console.log(`  🧹 기존 결제 내역 초기화 완료`);
     console.log(`  💳 결제 건수: ${payments.length}건`);
 
     // 결제 실행
@@ -211,11 +229,10 @@ function generateMdReport() {
         lines.push(`## 계약 #${c.contract_id}`);
         lines.push(``);
 
-        // 청구 vs 입금 비교 - 청구월 순서
         lines.push(`### 청구 vs 입금 비교`);
         lines.push(``);
-        lines.push(`| 구분 | 청구월 | 예정일 | 예정액 | 실입금일 | 실입금액 | 차액(누적) | 상태 |`);
-        lines.push(`|------|--------|--------|--------|----------|----------|------|------|`);
+        lines.push(`| 구분 | 청구월 | 예정일 | 예정액 | 실입금일 | 실입금액 | 차액(누적) | 상태 | Payment ID |`);
+        lines.push(`|------|--------|--------|--------|----------|----------|------|------|------------|`);
 
         let cumBalance = 0; // 누적 차액
         for (const inv of c.invoices) {
@@ -224,7 +241,7 @@ function generateMdReport() {
             if (allocs.length === 0) {
                 cumBalance -= inv.amount;
                 const cumStr = cumBalance > 0 ? `+${formatNumber(cumBalance)}` : cumBalance < 0 ? formatNumber(cumBalance) : '0';
-                lines.push(`| ${inv.type_label} | ${inv.billing_month} | ${inv.due_date || '-'} | ${formatNumber(inv.amount)} | - | 0 | ${cumStr} | ${inv.status} |`);
+                lines.push(`| ${inv.type_label} | ${inv.billing_month} | ${inv.due_date || '-'} | ${formatNumber(inv.amount)} | - | 0 | ${cumStr} | ${inv.status} | - |`);
             } else {
                 let cumAlloc = 0;
                 for (let ai = 0; ai < allocs.length; ai++) {
@@ -232,6 +249,7 @@ function generateMdReport() {
                     cumAlloc += alloc.allocated_amount;
                     const payment = c.db_payments.find(p => p.id === alloc.payment_id);
                     const paidDate = payment ? payment.paid_at.substring(0, 10) : '-';
+                    const payIdStr = alloc.payment_id || '-';
 
                     if (ai === 0) {
                         cumBalance += cumAlloc - inv.amount;
@@ -242,9 +260,9 @@ function generateMdReport() {
                     const cumStr = cumBalance > 0 ? `+${formatNumber(cumBalance)}` : cumBalance < 0 ? formatNumber(cumBalance) : '0';
 
                     if (ai === 0) {
-                        lines.push(`| ${inv.type_label} | ${inv.billing_month} | ${inv.due_date || '-'} | ${formatNumber(inv.amount)} | ${paidDate} | ${formatNumber(alloc.allocated_amount)} | ${cumStr} | ${inv.status} |`);
+                        lines.push(`| ${inv.type_label} | ${inv.billing_month} | ${inv.due_date || '-'} | ${formatNumber(inv.amount)} | ${paidDate} | ${formatNumber(alloc.allocated_amount)} | ${cumStr} | ${inv.status} | ${payIdStr} |`);
                     } else {
-                        lines.push(`| " | " | " | " | ${paidDate} | ${formatNumber(alloc.allocated_amount)} | ${cumStr} | " |`);
+                        lines.push(`| " | " | " | " | ${paidDate} | ${formatNumber(alloc.allocated_amount)} | ${cumStr} | " | ${payIdStr} |`);
                     }
                 }
             }

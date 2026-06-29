@@ -262,19 +262,12 @@
             <input type="file" id="ai-file-input" accept=".pdf, .png, .jpg, .jpeg" style="display: none;"
                 onchange="handleFileSelect(event)">
             <button class="btn-glass" onclick="startAIUpload()">파일 업로드</button>
-            <button class="btn-glass" onclick="navigateToContractForm('new')">직접 추가</button>
+            <button class="btn-glass" onclick="openTenantEditModal()">세입자 추가</button>
         </div>
     </div>
 
     <div class="container" id="main-content">
         <div class="list-controls">
-            <button id="toggle-terminated-btn" class="control-btn" onclick="toggleTerminatedVisibility()">
-                <span id="terminated-btn-text">계약 종료 숨김</span>
-            </button>
-            <button id="sort-method-btn" class="control-btn" onclick="toggleSortMethod()">
-                <span>정렬: </span>
-                <span id="sort-btn-text">건물 호수별</span>
-            </button>
         </div>
 
         <div id="tenant-blocks-container">
@@ -368,7 +361,13 @@
             try {
                 const res = await fetch(`/api/tenants/active-list?role=${user.role}&user_id=${user.id}`);
                 if (!res.ok) throw new Error('Failed to fetch tenants');
-                allTenants = await res.json();
+                const rawData = await res.json();
+                
+                const unique = new Map();
+                for (const t of rawData) {
+                    if (!unique.has(t.user_id)) unique.set(t.user_id, t);
+                }
+                allTenants = Array.from(unique.values());
                 renderTenants();
             } catch (err) {
                 console.error(err);
@@ -382,36 +381,19 @@
                 return;
             }
 
-            let filtered = allTenants;
-            if (hideTerminated) {
-                filtered = allTenants.filter(t => t.status !== '종료');
-            }
-
-            const sorted = [...filtered].sort((a, b) => {
-                if (sortMethod === 'expiration') {
-                    const dateA = a.contract_end_date || '9999-12-31';
-                    const dateB = b.contract_end_date || '9999-12-31';
-                    return dateA.localeCompare(dateB);
-                } else {
-                    const bCompare = (a.building || '').localeCompare(b.building || '');
-                    if (bCompare !== 0) return bCompare;
-                    return String(a.room_number || '').localeCompare(String(b.room_number || ''), undefined, { numeric: true });
-                }
-            });
+            const sorted = [...allTenants].sort((a, b) => (a.nickname || '').localeCompare(b.nickname || ''));
 
             container.innerHTML = `
                 <div class="tenant-list">
                     ${sorted.map(t => {
-                const start = t.contract_start_date ? t.contract_start_date.split('T')[0].split(' ')[0] : '-';
-                const end = t.contract_end_date ? t.contract_end_date.split('T')[0].split(' ')[0] : '-';
+                const phone = t.phone_number ? formatPhone(t.phone_number) : '-';
+                const dob = t.birth_date || '-';
                 const building = t.building || '미지정';
                 const room = t.room_number || '-';
-                const deposit = t.deposit ? Math.floor(t.deposit / 10000) : 0;
-                const rent = t.rent ? Math.floor(t.rent / 10000) : 0;
-                const mgmtFee = t.maintenance_fee ? Math.floor(t.maintenance_fee / 10000) : 0;
+                const tString = JSON.stringify(t).replace(/'/g, "&#39;").replace(/"/g, '&quot;');
 
                 return `
-                            <div class="tenant-summary" style="cursor:pointer; ${t.status === '종료' ? 'opacity: 0.6;' : ''}" onclick="navigateToContractForm('${t.contract_id ? 'view' : 'new'}', ${t.contract_id || null}, ${JSON.stringify(t).replace(/"/g, '&quot;')})">
+                            <div class="tenant-summary" style="cursor:pointer;" onclick='openTenantEditModal(${tString})'>
                                 <div class="room-badge" title="${building} ${room}">
                                     <div class="b-name">${building}</div>
                                     <div class="r-num">${room}</div>
@@ -419,15 +401,14 @@
                                 <div class="tenant-center">
                                     <div class="center-top" style="display: flex; align-items: center;">
                                         <span>${t.nickname || '이름 없음'}</span>
-                                        <span class="user-status-badge status-${t.status || '신청'}">${t.status === '종료' ? '계약 종료됨' : (t.status || '신청')}</span>
+                                        <span class="user-status-badge status-${t.status || '신청'}">${t.status || '신청'}</span>
                                     </div>
                                     <div class="center-bottom">
-                                        <div>${start} ~ ${end}</div>
-                                        <div>${deposit.toLocaleString()} / ${rent.toLocaleString()} / ${mgmtFee.toLocaleString()}</div>
+                                        <div>연락처: ${phone}</div>
+                                        <div>생년월일: ${dob}</div>
                                     </div>
                                 </div>
                                 <div class="tenant-actions" onclick="event.stopPropagation()">
-                                    ${!t.contract_id ? `<button class="action-btn-sm btn-edit" onclick="navigateToContractForm('new', null, ${JSON.stringify(t).replace(/"/g, '&quot;')})">계약 추가</button>` : ''}
                                     <button class="action-btn-sm btn-del" onclick="deleteTenantUser(${t.user_id}, '${t.nickname || '이름 없음'}')">삭제</button>
                                 </div>
                             </div>
@@ -970,6 +951,20 @@
             if (parsedData.tenantDob) params.set('tenant_dob', parsedData.tenantDob);
 
             window.location.href = `/contract_new.html?${params.toString()}`;
+        }
+
+        function openTenantEditModal(tenant = null) {
+            if (tenant) {
+                const params = new URLSearchParams();
+                if (tenant.user_id) params.set('id', tenant.user_id);
+                if (tenant.nickname) params.set('nickname', tenant.nickname);
+                if (tenant.phone_number) params.set('phone', tenant.phone_number);
+                if (tenant.birth_date) params.set('dob', tenant.birth_date);
+                if (tenant.keywords_str) params.set('keywords', tenant.keywords_str);
+                window.location.href = `/tenant_new.html?${params.toString()}`;
+            } else {
+                window.location.href = '/tenant_new.html';
+            }
         }
     </script>
 </body>

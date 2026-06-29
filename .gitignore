@@ -4,3 +4,9 @@ env
 *.log
 /data/*.db
 sugar.db
+test/invoice/contracts.json
+test/invoice/payments.json
+test/invoice/test_result.json
+test/invoice/test_result.md
+test/invoice/test_payment_result.json
+test/invoice/test_payment_result.md

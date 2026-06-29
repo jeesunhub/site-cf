@@ -19,136 +19,126 @@
             flex-shrink: 0;
         }
 
-        .sticky-calendar-container {
+        .timeline-container {
             flex-shrink: 0;
             background: var(--bg);
             width: 100%;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             height: 420px;
-            overflow: hidden;
+            display: flex;
+            flex-direction: column;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            user-select: none;
         }
-
-        .calendar-inner-full {
-            width: 100%;
-            height: 100%;
+        .timeline-header {
+            padding: 0.8rem 1rem;
             display: flex;
-            flex-direction: column;
-            padding: 0;
-        }
-
-        .calendar-card {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-
-        .calendar-grid {
-            flex-grow: 1;
-            background: rgba(255, 255, 255, 0.01);
-            border: none;
-            border-radius: 0;
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: auto repeat(6, 1fr);
-        }
-
-        .calendar-card .card-header {
-            padding: 0.5rem 1.5rem;
-            /* Reduced padding */
-            margin-bottom: 0;
-        }
-
-        .calendar-card .card-header h2 {
-            display: none;
-            /* iPhone-style: usually just shows the month */
-        }
-
-        .calendar-day-header {
-            background: rgba(255, 255, 255, 0.03);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 0 !important;
-            font-size: 0.6rem !important;
-            margin: 0 !important;
-            opacity: 0.4;
-            display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            height: auto;
-            line-height: 1;
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
-
-        .calendar-day {
-            min-height: auto !important;
-            height: 100%;
+        .timeline-scroll-area {
+            flex: 1;
+            overflow: auto;
             position: relative;
-            padding: 0 !important;
-            border-right: 1px solid rgba(255, 255, 255, 0.02);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+        }
+        /* 항상 보이도록 커스텀 스크롤바 추가 */
+        .timeline-scroll-area::-webkit-scrollbar {
+            height: 10px;
+            width: 10px;
+        }
+        .timeline-scroll-area::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5); 
+        }
+        .timeline-scroll-area::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.5); 
+            border-radius: 5px;
+        }
+        .timeline-scroll-area::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.8); 
+        }
+        .timeline-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            min-width: 800px;
+        }
+        .timeline-table th, .timeline-table td {
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 8px;
+            text-align: center;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        .timeline-table th {
+            background: #0f172a;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .col-sticky {
+            position: sticky;
+            left: 0;
+            background: #1e293b;
+            z-index: 11;
+            text-align: left !important;
+            min-width: 130px;
+            max-width: 150px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+        }
+        .timeline-table th.col-sticky {
+            z-index: 12;
+            background: #0f172a;
+        }
+        .room-group-row td {
+            background: rgba(99, 102, 241, 0.1) !important;
+            font-weight: 600;
+            color: #a5b4fc;
+            text-align: left;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            position: sticky;
+            left: 0;
+            z-index: 5;
+        }
+        .tenant-row td {
             cursor: pointer;
             transition: background 0.2s;
         }
-
-        .calendar-day:hover {
+        .tenant-row:hover td {
             background: rgba(255, 255, 255, 0.02);
         }
-
-        .day-number {
-            position: absolute;
-            top: 2px;
-            left: 4px;
-            font-size: 0.65rem !important;
-            margin: 0 !important;
-            opacity: 0.4;
+        .tenant-row td.col-sticky:hover {
+            background: #2a374a;
         }
-
-        .calendar-day.sunday .day-number,
-        .calendar-day.holiday .day-number {
-            color: #ff4444 !important;
-            opacity: 0.8;
+        .badge {
+            display: inline-block;
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
         }
-
-        .calendar-day-header.sunday {
-            color: #ff4444 !important;
-            opacity: 0.8;
+        .badge-green { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .badge-yellow { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .badge-red { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .badge-gray {
+            background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.03) 5px, rgba(255,255,255,0.03) 10px);
+            color: rgba(255, 255, 255, 0.2);
         }
-
-        .calendar-day.today {
-            outline: 1px solid rgba(255, 255, 255, 0.4);
-            outline-offset: -1px;
-            background: rgba(255, 255, 255, 0.05) !important;
-        }
-
-        .day-events {
-            padding: 16px 2px 2px 2px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 2px;
-            height: 100%;
+        .tenant-name-small {
+            font-size: 0.85rem;
+            color: #f1f5f9;
             overflow: hidden;
-            align-content: flex-start;
+            text-overflow: ellipsis;
         }
-
-        .calendar-icon {
-            font-size: 0.8rem;
-            line-height: 1;
-            cursor: pointer;
-            user-select: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 12px;
-            height: 12px;
-        }
-
-        .other-month {
-            background: rgba(0, 0, 0, 0.2) !important;
-            opacity: 0.15;
+        .tenant-period-small {
+            font-size: 0.65rem;
+            color: rgba(255,255,255,0.5);
+            display: block;
+            margin-top: 2px;
         }
 
         .container {
@@ -679,43 +669,30 @@
             const anchor = document.getElementById('sticky-calendar-anchor');
             const container = document.getElementById('main-content');
 
-            // Render Sticky Calendar outside container
             anchor.innerHTML = `
-                <div class="sticky-calendar-container" id="calendar-scroll-area">
-                    <div class="calendar-inner-full">
-                        <div class="calendar-card">
-                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                                <div class="calendar-nav">
-                                    <button onclick="changeMonth(-1)">‹</button>
-                                    <span id="current-month-label"></span>
-                                    <button onclick="changeMonth(1)">›</button>
-                                </div>
-                                <button class="btn-glass" onclick="goToToday()">오늘</button>
-                            </div>
-                            <div class="calendar-grid" id="calendar-grid"></div>
+                <div class="timeline-container" id="timeline-container">
+                    <div class="timeline-header">
+                        <div class="calendar-nav">
+                            <button onclick="changeTimelineOffset(-6)">‹ 6개월</button>
+                            <span id="timeline-range-label" style="margin: 0 1rem; font-weight: 600;">타임라인</span>
+                            <button onclick="changeTimelineOffset(6)">6개월 ›</button>
                         </div>
+                        <button class="btn-glass" onclick="resetTimeline()">오늘 기준</button>
+                    </div>
+                    <div class="timeline-scroll-area">
+                        <table class="timeline-table">
+                            <thead>
+                                <tr id="timeline-head-row">
+                                    <th class="col-sticky">호실 / 세입자</th>
+                                </tr>
+                            </thead>
+                            <tbody id="timeline-body">
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             `;
 
-            // Add Scroll Interface for Calendar (iPhone-style)
-            const scrollArea = document.getElementById('calendar-scroll-area');
-            let isTransitioning = false;
-            scrollArea.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                if (isTransitioning) return;
-
-                if (Math.abs(e.deltaY) > 20) {
-                    isTransitioning = true;
-                    const delta = e.deltaY > 0 ? 1 : -1;
-                    changeMonth(delta);
-                    setTimeout(() => { isTransitioning = false; }, 300); // 300ms debounce
-                }
-            }, { passive: false });
-
-            // Add Swipe/Touch support if needed by user in future
-
-            // Render Unified List area below calendar
             container.innerHTML = `
                 <div class="list-container" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
                     <div class="toggle-container">
@@ -729,9 +706,41 @@
                 </div>
             `;
 
-            renderCalendar();
+            renderTimeline();
             renderStats();
             renderRecentTransactions();
+            enableDragToScroll();
+        }
+
+        function enableDragToScroll() {
+            const slider = document.querySelector('.timeline-scroll-area');
+            if (!slider) return;
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+
+            slider.addEventListener('mousedown', (e) => {
+                isDown = true;
+                slider.style.cursor = 'grabbing';
+                startX = e.pageX - slider.offsetLeft;
+                scrollLeft = slider.scrollLeft;
+            });
+            slider.addEventListener('mouseleave', () => {
+                isDown = false;
+                slider.style.cursor = 'grab';
+            });
+            slider.addEventListener('mouseup', () => {
+                isDown = false;
+                slider.style.cursor = 'grab';
+            });
+            slider.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - slider.offsetLeft;
+                const walk = (x - startX) * 2;
+                slider.scrollLeft = scrollLeft - walk;
+            });
+            slider.style.cursor = 'grab';
         }
 
         function switchListView(view) {
@@ -753,158 +762,144 @@
             }
         }
 
-        async function fetchHolidays(year) {
-            if (holidayCache[year]) return holidayCache[year];
-            try {
-                const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/KR`);
-                if (!res.ok) throw new Error('Holiday API failure');
-                const data = await res.json();
-                const yearHolidays = {};
-                data.forEach(h => {
-                    yearHolidays[h.date] = h.localName;
+        let timelineOffsetMonths = -3; // Start from 3 months ago
+
+        function resetTimeline() {
+            timelineOffsetMonths = -3;
+            renderTimeline();
+        }
+
+        function changeTimelineOffset(delta) {
+            timelineOffsetMonths += delta;
+            renderTimeline();
+        }
+
+        function renderTimeline() {
+            const headRow = document.getElementById('timeline-head-row');
+            const tBody = document.getElementById('timeline-body');
+            if (!headRow || !tBody) return;
+
+            // Generate 12 months array based on offset
+            const months = [];
+            const d = new Date();
+            d.setMonth(d.getMonth() + timelineOffsetMonths);
+            
+            for (let i = 0; i < 12; i++) {
+                months.push({
+                    val: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+                    label: `${d.getMonth() + 1}월`
                 });
-                holidayCache[year] = yearHolidays;
-                return yearHolidays;
-            } catch (err) {
-                console.warn('Holidays could not be fetched:', err);
-                return {};
+                d.setMonth(d.getMonth() + 1);
             }
-        }
 
-        function goToToday() {
-            currentMonth = new Date();
-            renderCalendar();
-        }
+            document.getElementById('timeline-range-label').textContent = `${months[0].val} ~ ${months[11].val}`;
 
-        async function changeMonth(delta) {
-            currentMonth.setMonth(currentMonth.getMonth() + delta);
-            await renderCalendar();
-        }
-
-        async function renderCalendar() {
-            const year = currentMonth.getFullYear();
-            const month = currentMonth.getMonth();
-            const holidays = await fetchHolidays(year);
-
-            const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0);
-
-            document.getElementById('current-month-label').textContent = `${year}년 ${month + 1}월`;
-
-            const grid = document.getElementById('calendar-grid');
-            if (!grid) return;
-            grid.innerHTML = '';
-
-            ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach((dayName, idx) => {
-                const header = document.createElement('div');
-                header.className = 'calendar-day-header';
-                if (idx === 0) header.classList.add('sunday');
-                header.textContent = dayName;
-                grid.appendChild(header);
+            // Setup Header
+            headRow.innerHTML = '<th class="col-sticky">호실 / 세입자</th>';
+            months.forEach(m => {
+                const th = document.createElement('th');
+                th.textContent = m.label;
+                headRow.appendChild(th);
             });
 
-            const startDate = new Date(firstDay);
-            startDate.setDate(startDate.getDate() - firstDay.getDay());
-            const currentDate = new Date(startDate);
-
-            // Calculate weeks needed
-            const totalDays = 42;
-            const weeks = 6;
-
-            // Generate all days first
-            const days = [];
-            for (let i = 0; i < totalDays; i++) {
-                const day = document.createElement('div');
-                day.className = 'calendar-day';
-                if (currentDate.getMonth() !== month) day.classList.add('other-month');
-                const dateStr = formatLocalDate(currentDate);
-                if (currentDate.getDay() === 0 || holidays[dateStr]) day.classList.add('holiday');
-                if (currentDate.toDateString() === new Date().toDateString()) day.classList.add('today');
-
-                const dateForClick = dateStr;
-                day.onclick = () => showDayDetail(dateForClick);
-
-                day.innerHTML = `<div class="day-number">${currentDate.getDate()}</div><div class="day-events"></div>`;
-                const eventsContainer = day.querySelector('.day-events');
-
-                if (Array.isArray(calendarData)) {
-                    // Track which icons we've added to this day to avoid identical duplicates from multi-invoice rows
-                    const addedKeys = new Set();
-
-                    calendarData.forEach(data => {
-                        const userColor = data.tenant_color || '#6366f1';
-
-                        const createIcon = (char, title) => {
-                            const key = `${char}-${data.contract_id}-${userColor}`;
-                            if (addedKeys.has(key)) return;
-                            addedKeys.add(key);
-
-                            const span = document.createElement('span');
-                            span.className = 'calendar-icon';
-                            span.style.color = userColor;
-                            span.textContent = char;
-                            span.title = title;
-                            eventsContainer.appendChild(span);
+            // Group calendarData
+            const rooms = {};
+            if (Array.isArray(calendarData)) {
+                calendarData.forEach(row => {
+                    const rKey = `${row.building_name || ''} ${row.room_number ? row.room_number + '호' : ''}`.trim();
+                    if (!rooms[rKey]) rooms[rKey] = {};
+                    if (!rooms[rKey][row.contract_id]) {
+                        rooms[rKey][row.contract_id] = {
+                            tenant_name: row.tenant_nickname || '이름 없음',
+                            start: row.contract_start_date || '2000-01-01',
+                            end: row.contract_end_date || '2099-12-31',
+                            color: row.tenant_color || '#6366f1',
+                            invoices: {}
                         };
+                    }
+                    if (row.bill_month) {
+                        rooms[rKey][row.contract_id].invoices[row.bill_month] = {
+                            total: row.total_amount || 0,
+                            paid: row.paid_amount || 0,
+                            dates: row.paid_dates || ''
+                        };
+                    }
+                });
+            }
 
-                        // 1. Contract Start (▶)
-                        if (data.contract_start_date === dateStr) {
-                            createIcon('▶', '계약 시작');
-                        }
+            tBody.innerHTML = '';
 
-                        // 2. Contract End (◀)
-                        if (data.contract_end_date === dateStr) {
-                            createIcon('◀', '계약 종료');
-                        }
+            if (Object.keys(rooms).length === 0) {
+                tBody.innerHTML = '<tr><td colspan="13" class="empty-state">계약 데이터가 없습니다.</td></tr>';
+                return;
+            }
 
-                        // 3. Invoice & Payment Logic
-                        const isDue = data.due_date === dateStr;
-                        const paidDates = data.paid_dates ? data.paid_dates.split(',') : [];
-                        const isPaidToday = paidDates.includes(dateStr);
+            // Render Rows
+            for (const [rKey, contracts] of Object.entries(rooms)) {
+                // Room Group Header
+                const trGroup = document.createElement('tr');
+                trGroup.className = 'room-group-row';
+                const tdGroup = document.createElement('td');
+                tdGroup.colSpan = 13;
+                tdGroup.innerHTML = `🏠 ${rKey}`;
+                trGroup.appendChild(tdGroup);
+                tBody.appendChild(trGroup);
 
-                        if (isDue && isPaidToday) {
-                            createIcon('◎', '청구 및 납부');
+                // Contracts
+                for (const [cId, cData] of Object.entries(contracts)) {
+                    const tr = document.createElement('tr');
+                    tr.className = 'tenant-row';
+
+                    // Sticky Column
+                    const tdSticky = document.createElement('td');
+                    tdSticky.className = 'col-sticky';
+                    tdSticky.innerHTML = `
+                        <div class="tenant-name-small" style="color: ${cData.color}">${cData.tenant_name}</div>
+                        <div class="tenant-period-small">${cData.start.substring(2).replace(/-/g,'.')} ~ ${cData.end.substring(2).replace(/-/g,'.')}</div>
+                    `;
+                    tr.appendChild(tdSticky);
+
+                    // Month Columns
+                    months.forEach(m => {
+                        const td = document.createElement('td');
+                        
+                        // Check if month is within contract
+                        const mStr = m.val;
+                        const sStr = cData.start.substring(0,7);
+                        const eStr = cData.end.substring(0,7);
+
+                        if (mStr < sStr || mStr > eStr) {
+                            td.innerHTML = '<span class="badge badge-gray">-</span>';
+                            td.title = '계약 기간 외';
                         } else {
-                            if (isDue) createIcon('○', '임대료 청구');
-                            if (isPaidToday) createIcon('●', '납부 완료');
+                            const inv = cData.invoices[mStr];
+                            if (!inv) {
+                                td.innerHTML = '<span style="color: rgba(255,255,255,0.3); font-size: 0.7rem;">-</span>';
+                            } else {
+                                if (inv.paid >= inv.total) {
+                                    td.innerHTML = `<span class="badge badge-green">${formatShortDate(inv.dates) || '완납'}</span>`;
+                                    td.title = `청구: ${formatCurrency(inv.total)}원 / 완납`;
+                                } else if (inv.paid > 0) {
+                                    td.innerHTML = `<span class="badge badge-yellow">${formatShortDate(inv.dates)}</span>`;
+                                    td.title = `청구: ${formatCurrency(inv.total)}원 / 입금: ${formatCurrency(inv.paid)}원`;
+                                } else {
+                                    td.innerHTML = '<span class="badge badge-red">미납</span>';
+                                    td.title = `청구: ${formatCurrency(inv.total)}원 / 미납`;
+                                }
+                            }
                         }
+                        tr.appendChild(td);
                     });
+                    tBody.appendChild(tr);
                 }
-                days.push(day);
-                currentDate.setDate(currentDate.getDate() + 1);
             }
+        }
 
-            // Check if last week (row 6) is entirely other month
-            // The days array index 35 is the start of the 6th week (0-indexed 35..41)
-            const sixthWeekStart = days[35];
-            const showSixthWeek = !sixthWeekStart.classList.contains('other-month');
-
-            // Check if 5th week (row 5) is also entirely other month
-            // The days array index 28 is the start of the 5th week (0-indexed 28..34)
-            const fifthWeekStart = days[28];
-            const showFifthWeek = !fifthWeekStart.classList.contains('other-month');
-
-            // Append days to grid
-            days.forEach((day, i) => {
-                if (i >= 28 && !showFifthWeek) return; // Skip 5th & 6th weeks
-                if (i >= 35 && !showSixthWeek) return; // Skip 6th week
-                grid.appendChild(day);
-            });
-
-            // Adjust grid rows
-            if (!showFifthWeek) {
-                // 4 Weeks
-                grid.style.gridTemplateRows = 'auto repeat(4, 1fr)';
-                document.querySelector('.sticky-calendar-container').style.height = '300px';
-            } else if (!showSixthWeek) {
-                // 5 Weeks
-                grid.style.gridTemplateRows = 'auto repeat(5, 1fr)';
-                document.querySelector('.sticky-calendar-container').style.height = '360px';
-            } else {
-                // 6 Weeks
-                grid.style.gridTemplateRows = 'auto repeat(6, 1fr)';
-                document.querySelector('.sticky-calendar-container').style.height = '420px';
-            }
+        function formatShortDate(datesStr) {
+            if (!datesStr) return '';
+            const parts = datesStr.split(',')[0].split('-'); // take first date
+            if (parts.length >= 3) return `${parts[1]}.${parts[2]}`;
+            return datesStr;
         }
 
         function renderStats() {
