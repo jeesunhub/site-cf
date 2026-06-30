@@ -2844,50 +2844,6 @@ app.post('/api/users/quick', (req, res) => {
 
 
 // 19b. Update Tenant Keywords
-app.put('/api/tenants/:id/keywords', (req, res) => {
-    const tenantId = req.params.id;
-    const { keywords } = req.body;
-    
-    if (!Array.isArray(keywords)) return res.status(400).json({ error: 'Keywords must be an array' });
-
-    db.all('SELECT id FROM contracts WHERE tenant_id = ? AND status = \'active\'', [tenantId], (err, contracts) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (!contracts || contracts.length === 0) {
-            return res.json({ message: 'No active contracts found for this tenant. Keywords cannot be saved yet.' });
-        }
-
-        const contractIds = contracts.map(c => c.id);
-        const placeholders = contractIds.map(() => '?').join(',');
-        
-        db.run(`DELETE FROM contract_keywords WHERE contract_id IN (${placeholders})`, contractIds, (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-
-            if (keywords.length === 0) return res.json({ message: 'Keywords cleared' });
-
-            let insertQuery = 'INSERT INTO contract_keywords (contract_id, keyword) VALUES ';
-            let insertValues = [];
-            let insertPlaceholders = [];
-
-            contracts.forEach(c => {
-                keywords.forEach(k => {
-                    const trimmed = String(k).trim();
-                    if (trimmed) {
-                        insertPlaceholders.push('(?, ?)');
-                        insertValues.push(c.id, trimmed);
-                    }
-                });
-            });
-
-            if (insertPlaceholders.length === 0) return res.json({ message: 'No valid keywords provided' });
-
-            insertQuery += insertPlaceholders.join(', ');
-            db.run(insertQuery, insertValues, (err) => {
-                if (err) return res.status(500).json({ error: err.message });
-                res.json({ message: 'Keywords updated successfully' });
-            });
-        });
-    });
-});
 // 20a. Search Tenants by Keyword (Active Contracts)
 app.get('/api/tenants/search', (req, res) => {
     const { keyword, landlord_id } = req.query;

@@ -281,11 +281,19 @@
                 const targetUserId = result.userId;
 
                 if (targetUserId) {
-                    await fetch(`/api/tenants/${targetUserId}/keywords`, {
+                    const kwRes = await fetch(`/api/tenants/${targetUserId}/keywords`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ keywords })
                     });
+                    if (!kwRes.ok) {
+                        const kwErr = await kwRes.json();
+                        console.error('Keywords save failed:', kwErr);
+                        alert('키워드 저장에 실패했습니다: ' + (kwErr.error || '알 수 없는 오류'));
+                        btn.disabled = false;
+                        btn.textContent = '저장하기';
+                        return;
+                    }
                 }
 
                 alert('저장되었습니다.');

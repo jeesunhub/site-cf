@@ -4401,7 +4401,7 @@ app.put('/api/tenants/:id/keywords', async (c) => {
     db.all('SELECT id FROM contracts WHERE tenant_id = ?', [tenantId], (err, contracts) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!contracts || contracts.length === 0) {
-            return res.json({ message: 'No active contracts found for this tenant. Keywords cannot be saved yet.' });
+            return res.status(404).json({ error: 'No contract found for this tenant.' });
         }
 
         const contractIds = contracts.map(c => c.id);
