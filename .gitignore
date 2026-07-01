@@ -4,6 +4,14 @@ env
 *.log
 /data/*.db
 sugar.db
+data.db
+.dev.vars
+.wrangler/
+scratch.js
+scratch2.js
+scratch3.js
+seed.js
+test_db.js
 test/invoice/contracts.json
 test/invoice/payments.json
 test/invoice/test_result.json

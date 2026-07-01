@@ -3313,6 +3313,28 @@ app.post('/api/payments/batch', async (c) => {
     });
 });
 
+// 14b. Check Existing Payments (for PDF import deduplication)
+app.post('/api/payments/check-existing', async (c) => {
+    const body = await getBodySafely(c);
+    const { contract_ids } = body;
+
+    if (!contract_ids || !Array.isArray(contract_ids) || contract_ids.length === 0) {
+        return c.json([]);
+    }
+
+    const placeholders = contract_ids.map(() => '?').join(',');
+    const query = `
+        SELECT contract_id, amount, DATE(paid_at) as paid_date
+        FROM payments
+        WHERE contract_id IN (${placeholders})
+    `;
+
+    db.all(query, contract_ids, (err, rows) => {
+        if (err) return c.json({ error: err.message }, 500);
+        return c.json(rows || []);
+    });
+});
+
 // 14a. Allocate Payment to Invoices (and create missing invoices)
 app.post('/api/payments/allocate', async (c) => {
   const req = {

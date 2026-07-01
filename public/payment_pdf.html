@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF 추가 - Sugar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <style>
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            height: 3.5rem;
+        }
+
+        .header-section h1 {
+            font-size: 1.25rem !important;
+            margin: 0;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            white-space: nowrap;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1.5rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .upload-area {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            background: var(--card-bg);
+            border-radius: 1rem;
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .upload-area .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .upload-area .upload-text {
+            font-size: 1.1rem;
+            opacity: 0.7;
+        }
+
+        .upload-area .upload-hint {
+            font-size: 0.8rem;
+            opacity: 0.4;
+            margin-top: 0.5rem;
+        }
+
+        .list-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 0 0.5rem;
+        }
+
+        .list-toolbar .summary {
+            font-size: 0.9rem;
+            opacity: 0.6;
+        }
+
+        .btn-apply-all {
+            height: 2.2rem;
+            padding: 0 1.5rem;
+            border-radius: 0.5rem;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: var(--primary);
+            color: white;
+            transition: opacity 0.2s;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-apply-all:hover {
+            opacity: 0.9;
+        }
+
+        .btn-apply-all:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .parsed-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .parsed-item {
+            display: flex;
+            align-items: stretch;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 0.8rem;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .parsed-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .parsed-item.registered {
+            background: rgba(34, 197, 94, 0.05);
+            border-color: rgba(34, 197, 94, 0.2);
+        }
+
+        .parsed-item.applied {
+            background: rgba(34, 197, 94, 0.08);
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+
+        .item-checkbox {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 1rem;
+            flex-shrink: 0;
+        }
+
+        .item-checkbox input[type="checkbox"] {
+            width: 1.3rem;
+            height: 1.3rem;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        .item-center {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 0.8rem 0;
+            min-width: 0;
+        }
+
+        .center-top-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        .tenant-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #f8fafc;
+        }
+
+        .match-score {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 0.3rem;
+            font-weight: 600;
+        }
+
+        .match-score.high {
+            background: rgba(99, 102, 241, 0.2);
+            color: #a5b4fc;
+        }
+
+        .match-score.low {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+}
+
+        .match-score.none {
+            background: rgba(248, 113, 113, 0.1);
+            color: #f87171;
+        }
+
+        .badge-registered {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 0.3rem;
+            font-weight: 600;
+            background: rgba(34, 197, 94, 0.15);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .badge-applied {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 0.3rem;
+            font-weight: 600;
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .center-amount {
+            font-size: 0.9rem;
+            color: #4ade80;
+            font-weight: 500;
+        }
+
+        .center-date {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .center-keywords {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.4);
+            margin-top: 0.3rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+        }
+
+        .keyword-chip {
+            padding: 0.1rem 0.4rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.3rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .keyword-chip.matched {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.3);
+            color: #a5b4fc;
+        }
+
+        .item-right {
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            flex-shrink: 0;
+        }
+
+        .btn-apply {
+            height: 2rem;
+            padding: 0 1rem;
+            border-radius: 0.4rem;
+            border: none;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: var(--primary);
+            color: white;
+            transition: opacity 0.2s;
+        }
+
+        .btn-apply:hover {
+            opacity: 0.9;
+        }
+
+        .btn-apply:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .loading-overlay .spinner {
+            width: 3rem;
+            height: 3rem;
+            border: 3px solid rgba(99, 102, 241, 0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: var(--primary);
+            transition: width 0.3s;
+            z-index: 3000;
+            display: none;
+        }
+    </style>
+</head>
+
+<body class="has-back-button">
+    <header id="layout-header"></header>
+
+    <main id="layout-main">
+        <div class="header-section">
+            <h1>PDF 추가</h1>
+            <div class="action-buttons">
+                <input type="file" id="pdf-upload" accept=".pdf" style="display:none" onchange="handlePdfUpload(event)">
+                <button class="btn-glass" onclick="document.getElementById('pdf-upload').click()">PDF 파일 선택</button>
+            </div>
+        </div>
+
+        <div class="container">
+            <div id="upload-area" class="upload-area" onclick="document.getElementById('pdf-upload').click()">
+                <div class="upload-icon">📄</div>
+                <div class="upload-text">은행 거래내역 PDF 파일을 선택하세요</div>
+                <div class="upload-hint">PDF 파일을 파싱하여 납부 내역을 자동 매칭합니다</div>
+            </div>
+
+            <div id="list-area" style="display:none;">
+                <div class="list-toolbar">
+                    <span class="summary" id="list-summary"></span>
+                    <button class="btn-apply-all" id="btn-apply-all" onclick="applyAll()">전체 적용</button>
+                </div>
+                <div id="parsed-list" class="parsed-list"></div>
+            </div>
+        </div>
+    </main>
+
+    <footer id="layout-footer">
+        <div class="footer-container" style="flex-wrap: wrap;">
+            <div class="footer-biz-name" onclick="toggleFooterInfo()">상호명: 김지선, 김세미 부동산</div>
+            <div class="footer-links">
+                <a href="/terms.html" class="footer-btn" style="text-decoration: none;">이용약관</a>
+                <a href="/privacy.html" class="footer-btn" style="text-decoration: none;">개인정보처리방침</a>
+            </div>
+            <div id="footer-biz-details" class="footer-info-details">
+                상호명: 김지선, 김세미 부동산<br>
+                대표자명: 김지선외 1명<br>
+                사업자등록번호: 640-31-00762<br>
+                주소: 경기도 수원시 팔달구 우만동 89-5 GS지에스타워 403호
+            </div>
+        </div>
+    </footer>
+
+    <div class="progress-bar" id="progress-bar"></div>
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+        let activeContracts = [];
+        let parsedRows = [];
+        let existingPayments = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!user) { window.location.href = '/index.html'; return; }
+            if (user.role === 'tenant') { window.location.href = 'payments_monthly.html'; return; }
+
+            renderNavbar();
+
+            const navBack = document.querySelector('.nav-back-btn');
+            if (navBack) {
+                navBack.onclick = (e) => {
+                    e.preventDefault();
+                    window.location.href = 'payments.html';
+                };
+            }
+
+            await loadActiveContracts();
+        });
+
+        async function loadActiveContracts() {
+            try {
+                const res = await fetch(`/api/landlord/${user.id}/contracts/active`);
+                if (res.ok) {
+                    const raw = await res.json();
+                    const unique = [];
+                    const seenIds = new Set();
+                    raw.forEach(c => {
+                        if (!seenIds.has(c.id)) {
+                            seenIds.add(c.id);
+                            unique.push(c);
+                        }
+                    });
+                    activeContracts = unique;
+                }
+            } catch (e) {
+                console.error('Failed to load active contracts', e);
+            }
+        }
+
+        // ===== PDF Upload & Parse =====
+
+        async function handlePdfUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showLoading(true);
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let fullText = '';
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const items = textContent.items.filter(item => item.str.trim().length > 0);
+                    if (items.length === 0) continue;
+
+                    let lastY = items[0].transform[5];
+                    let currentLine = '';
+                    for (const item of items) {
+                        const y = item.transform[5];
+                        if (Math.abs(y - lastY) > 2) {
+                            fullText += currentLine.trim() + '\n';
+                            currentLine = item.str;
+                        } else {
+                            currentLine += ' ' + item.str;
+                        }
+                        lastY = y;
+                    }
+                    if (currentLine.trim()) {
+                        fullText += currentLine.trim() + '\n';
+                    }
+                }
+
+                const rows = parsePdfText(fullText);
+
+                if (rows.length === 0) {
+                    alert('PDF에서 거래 내역을 찾을 수 없습니다.');
+                    showLoading(false);
+                    return;
+                }
+
+                // Only keep deposit rows (in > 0)
+                parsedRows = rows.filter(r => r.in > 0);
+
+                if (parsedRows.length === 0) {
+                    alert('입금 내역이 없습니다.');
+                    showLoading(false);
+                    return;
+                }
+
+                // Match tenants and check existing payments
+                await checkExistingPayments();
+                renderList();
+
+                document.getElementById('upload-area').style.display = 'none';
+                document.getElementById('list-area').style.display = 'block';
+
+            } catch (err) {
+                console.error('PDF 파싱 오류:', err);
+                alert('PDF 파일을 읽는 중 오류가 발생했습니다: ' + err.message);
+            } finally {
+                showLoading(false);
+                event.target.value = ''; // Reset for re-upload
+            }
+        }
+
+        // ===== parsePdfText (from test/import-pdf/test_pdf_parse.js) =====
+
+        function parsePdfText(text) {
+            const isSpacedOut = /[가-힣]\s[가-힣]\s[가-힣]/.test(text) || /\d\s\.\s\d/.test(text);
+            if (isSpacedOut) {
+                const amountPlaceholders = [];
+                text = text.replace(/((?:\d\s{0,1}){1,3}(?:,\s*(?:\d\s{0,1}){1,3})+\s*원)/g, (m) => {
+                    const placeholder = `__AMT${amountPlaceholders.length}__`;
+                    amountPlaceholders.push(m.replace(/\s+/g, ''));
+                    return placeholder;
+                });
+                text = text.replace(/((?:\d\s{0,1}){1,3}\s*원)/g, (m) => {
+                    if (m.includes('__AMT')) return m;
+                    const placeholder = `__AMT${amountPlaceholders.length}__`;
+                    amountPlaceholders.push(m.replace(/\s+/g, ''));
+                    return placeholder;
+                });
+
+                text = text.replace(/(?<=[가-힣])\s+(?=[가-힣])/g, '');
+                text = text.replace(/(?<=[A-Za-z])\s+(?=[A-Za-z])/g, '');
+                text = text.replace(/(\d\s*)+\.\s*(\d\s*)+\.\s*(\d\s*)+/g, (m) => m.replace(/\s+/g, ''));
+                text = text.replace(/(\d\s*)+:\s*(\d\s*)+(:\s*(\d\s*)+)*/g, (m) => m.replace(/\s+/g, ''));
+
+                amountPlaceholders.forEach((val, idx) => {
+                    text = text.replace(`__AMT${idx}__`, val);
+                });
+
+                text = text.replace(/ {2,}/g, ' ');
+            }
+
+            const rows = [];
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+            const dateRegex = /(\d{4}[\.-]\d{2}[\.-]\d{2})/;
+            const amountRegex = /([\d,]+)/g;
+            const timeRegex = /(\d{2}:\d{2}(?::\d{2})?)/;
+
+            let currentDate = null;
+            let currentTime = null;
+
+            for (const line of lines) {
+                if (line.includes('거래일자') || line.includes('거래내역') || line.includes('적요') ||
+                    line.includes('입금액') || line.includes('출금액') || line.includes('잔액') ||
+                    line.includes('내역') || line.includes('구분') || line.includes('번호')) {
+                    continue;
+                }
+
+                const dateMatch = line.match(dateRegex);
+                if (dateMatch) {
+                    currentDate = dateMatch[1].replace(/\./g, '-');
+                }
+
+                const timeMatch = line.match(timeRegex);
+                if (timeMatch) {
+                    currentTime = timeMatch[1];
+                }
+
+                if (!currentDate) continue;
+
+                const lineWithoutDateTime = line
+                    .replace(dateRegex, ' ')
+                    .replace(timeRegex, ' ');
+
+                const amounts = [];
+                const wonAmountRegex = /([\d,]+)\s*원/g;
+                let match;
+                while ((match = wonAmountRegex.exec(lineWithoutDateTime)) !== null) {
+                    amounts.push(parseInt(match[1].replace(/,/g, '')) || 0);
+                }
+
+                if (amounts.length < 2) {
+                    const tempRegex = new RegExp(amountRegex.source, 'g');
+                    while ((match = tempRegex.exec(lineWithoutDateTime)) !== null) {
+                        amounts.push(parseInt(match[1].replace(/,/g, '')) || 0);
+                    }
+                }
+
+                if (amounts.length < 2) continue;
+
+                let depositAmount = 0;
+                let withdrawalAmount = 0;
+                let memo = '';
+
+                const lowerLine = line.toLowerCase();
+
+                if (lowerLine.includes('입금') || lowerLine.includes('deposit')) {
+                    const depositIdx = line.indexOf('입금') !== -1 ? line.indexOf('입금') : line.toLowerCase().indexOf('deposit');
+                    const afterDeposit = line.substring(depositIdx);
+                    const depositWonAmounts = [];
+                    let dMatch;
+                    const dWonRegex = /([\d,]+)\s*원/g;
+                    while ((dMatch = dWonRegex.exec(afterDeposit)) !== null) {
+                        depositWonAmounts.push(parseInt(dMatch[1].replace(/,/g, '')) || 0);
+                    }
+                    if (depositWonAmounts.length > 0) {
+                        depositAmount = depositWonAmounts[0];
+                    } else {
+                        const dRegex = new RegExp(amountRegex.source, 'g');
+                        while ((dMatch = dRegex.exec(afterDeposit)) !== null) {
+                            depositWonAmounts.push(parseInt(dMatch[1].replace(/,/g, '')) || 0);
+                        }
+                        depositAmount = depositWonAmounts.length > 0 ? depositWonAmounts[0] : 0;
+                    }
+                }
+
+                if (lowerLine.includes('출금') || lowerLine.includes('withdraw')) {
+                    const withdrawIdx = line.indexOf('출금') !== -1 ? line.indexOf('출금') : line.toLowerCase().indexOf('withdraw');
+                    const afterWithdraw = line.substring(withdrawIdx);
+                    const withdrawWonAmounts = [];
+                    let wMatch;
+                    const wWonRegex = /([\d,]+)\s*원/g;
+                    while ((wMatch = wWonRegex.exec(afterWithdraw)) !== null) {
+                        withdrawWonAmounts.push(parseInt(wMatch[1].replace(/,/g, '')) || 0);
+                    }
+                    if (withdrawWonAmounts.length > 0) {
+                        withdrawalAmount = withdrawWonAmounts[0];
+                    } else {
+                        const wRegex = new RegExp(amountRegex.source, 'g');
+                        while ((wMatch = wRegex.exec(afterWithdraw)) !== null) {
+                            withdrawWonAmounts.push(parseInt(wMatch[1].replace(/,/g, '')) || 0);
+                        }
+                        withdrawalAmount = withdrawWonAmounts.length > 0 ? withdrawWonAmounts[0] : 0;
+                    }
+                }
+
+                if (depositAmount === 0 && withdrawalAmount === 0 && amounts.length >= 2) {
+                    if (amounts.length >= 3) {
+                        if (amounts[0] === 0 && amounts[1] > 0) {
+                            withdrawalAmount = 0;
+                            depositAmount = amounts[1];
+                        } else if (amounts[0] > 0 && amounts[1] === 0) {
+                            withdrawalAmount = amounts[0];
+                            depositAmount = 0;
+                        } else {
+                            withdrawalAmount = amounts[0];
+                            depositAmount = amounts[1];
+                        }
+                    } else if (amounts[0] > 0 && amounts[1] === 0) {
+                        depositAmount = amounts[0];
+                        withdrawalAmount = 0;
+                    } else if (amounts[0] === 0 && amounts[1] > 0) {
+                        depositAmount = 0;
+                        withdrawalAmount = amounts[1];
+                    } else if (amounts[0] > 0 && amounts[1] > 0) {
+                        depositAmount = amounts[0];
+                        withdrawalAmount = amounts[1];
+                    }
+                }
+
+                memo = line
+                    .replace(dateRegex, '')
+                    .replace(timeRegex, '')
+                    .replace(/[\d,]+/g, '')
+                    .replace(/입금|출금|원/g, '')
+                    .trim()
+                    .substring(0, 100);
+
+                if (depositAmount > 0 || withdrawalAmount > 0) {
+                    rows.push({
+                        date: currentDate,
+                        time: currentTime || '',
+                        memo: memo,
+                        in: depositAmount,
+                        out: withdrawalAmount
+                    });
+                }
+            }
+
+            return rows;
+        }
+
+        // ===== Keyword Matching =====
+
+        function matchTenant(memo) {
+            if (!memo) return { contract: null, score: 0, matchedKeywords: [] };
+
+            const results = activeContracts.map(c => {
+                let score = 0;
+                const matchedKeywords = [];
+
+                // Check contract keywords
+                if (c.keywords && Array.isArray(c.keywords)) {
+                    c.keywords.forEach(k => {
+                        if (k && k.length > 0 && memo.includes(k)) {
+                            score += 100;
+                            matchedKeywords.push(k);
+                        }
+                    });
+                }
+
+                // Check nickname
+                if (c.nickname && c.nickname.length > 0 && memo.includes(c.nickname)) {
+                    score += 50;
+                    if (!matchedKeywords.includes(c.nickname)) {
+                        matchedKeywords.push(c.nickname);
+                    }
+                }
+
+                // Check room number (only if length >= 2 to avoid false positives)
+                if (c.room_number && String(c.room_number).length >= 2 && memo.includes(String(c.room_number))) {
+                    score += 30;
+                    if (!matchedKeywords.includes(String(c.room_number))) {
+                        matchedKeywords.push(String(c.room_number));
+                    }
+                }
+
+                return { contract: c, score, matchedKeywords };
+            });
+
+            results.sort((a, b) => b.score - a.score);
+            return results[0];
+        }
+
+        // ===== Check Existing Payments =====
+
+        async function checkExistingPayments() {
+            const contractIds = [...new Set(activeContracts.map(c => c.id))];
+            if (contractIds.length === 0) return;
+
+            try {
+                const res = await fetch('/api/payments/check-existing', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contract_ids: contractIds })
+                });
+                if (res.ok) {
+                    existingPayments = await res.json();
+                }
+            } catch (e) {
+                console.error('Failed to check existing payments', e);
+                existingPayments = [];
+            }
+        }
+
+        function isAlreadyRegistered(row, contractId) {
+            if (!contractId) return false;
+            return existingPayments.some(p =>
+                p.contract_id === contractId &&
+                p.amount === row.in &&
+                p.paid_date === row.date
+            );
+        }
+
+        // ===== Render List =====
+
+        function renderList() {
+            const listEl = document.getElementById('parsed-list');
+            listEl.innerHTML = '';
+
+            let checkedCount = 0;
+            let registeredCount = 0;
+
+            parsedRows.forEach((row, idx) => {
+                const match = matchTenant(row.memo);
+                const contractId = match.contract ? match.contract.id : null;
+                const isRegistered = isAlreadyRegistered(row, contractId);
+                const isHighMatch = match.score >= 100;
+
+                if (isRegistered) registeredCount++;
+                if (isRegistered || isHighMatch) checkedCount++;
+
+                const item = document.createElement('div');
+                item.className = 'parsed-item';
+                if (isRegistered) item.classList.add('registered');
+
+                // Checkbox
+                const checkboxChecked = isRegistered || isHighMatch ? 'checked' : '';
+                const checkboxDisabled = isRegistered ? 'disabled' : '';
+
+                // Match info
+                let matchHtml = '';
+                if (match.contract) {
+                    const scoreClass = match.score >= 100 ? 'high' : (match.score > 0 ? 'low' : 'none');
+                    matchHtml = `
+                        <span class="tenant-name">${match.contract.nickname}</span>
+                        <span class="match-score ${scoreClass}">${match.score}점</span>
+                        <span style="font-size:0.75rem; opacity:0.4;">${match.contract.building || ''} ${match.contract.room_number || ''}호</span>
+                    `;
+                } else {
+                    matchHtml = `<span class="tenant-name" style="opacity:0.4;">매칭 없음</span>`;
+                }
+
+                // Registered badge
+                let badgeHtml = '';
+                if (isRegistered) {
+                    badgeHtml = '<span class="badge-registered">이미 등록</span>';
+                }
+
+                // Keywords
+                const allKeywords = match.matchedKeywords || [];
+                const keywordsHtml = allKeywords.length > 0
+                    ? allKeywords.map(k => `<span class="keyword-chip matched">${k}</span>`).join('')
+                    : '<span style="opacity:0.3;">매칭된 키워드 없음</span>';
+
+                // Apply button
+                const applyDisabled = isRegistered ? 'disabled' : '';
+
+                item.innerHTML = `
+                    <div class="item-checkbox">
+                        <input type="checkbox" id="cb-${idx}" ${checkboxChecked} ${checkboxDisabled}
+                            onchange="onCheckboxChange(${idx})">
+                    </div>
+                    <div class="item-center">
+                        <div class="center-top-row">
+                            ${matchHtml}
+                            ${badgeHtml}
+                            <span class="center-amount">${row.in.toLocaleString()}원</span>
+                            <span class="center-date">${row.date} ${row.time || ''}</span>
+                        </div>
+                        <div class="center-keywords">
+                            <span style="opacity:0.5;">키워드:</span>
+                            ${keywordsHtml}
+                        </div>
+                    </div>
+                    <div class="item-right">
+                        <button class="btn-apply" id="apply-${idx}" ${applyDisabled}
+                            onclick="applySingle(${idx})">적용</button>
+                    </div>
+                `;
+
+                listEl.appendChild(item);
+            });
+
+            // Update summary
+            document.getElementById('list-summary').textContent =
+                `총 ${parsedRows.length}건 | 체크 ${checkedCount}건 | 이미 등록 ${registeredCount}건`;
+        }
+
+        function onCheckboxChange(idx) {
+            // Just update summary
+            let checkedCount = 0;
+            let registeredCount = 0;
+            parsedRows.forEach((row, i) => {
+                const cb = document.getElementById(`cb-${i}`);
+                if (!cb) return;
+                const match = matchTenant(row.memo);
+                const contractId = match.contract ? match.contract.id : null;
+                const isRegistered = isAlreadyRegistered(row, contractId);
+                if (isRegistered) registeredCount++;
+                if (cb.checked) checkedCount++;
+            });
+            document.getElementById('list-summary').textContent =
+                `총 ${parsedRows.length}건 | 체크 ${checkedCount}건 | 이미 등록 ${registeredCount}건`;
+        }
+
+        // ===== Apply Payments =====
+
+        async function applySingle(idx) {
+            const row = parsedRows[idx];
+            const match = matchTenant(row.memo);
+            if (!match.contract) {
+                alert('매칭된 세입자가 없습니다.');
+                return;
+            }
+
+            const contractId = match.contract.id;
+            const paidAt = row.date + 'T' + (row.time || '12:00:00');
+
+            const btn = document.getElementById(`apply-${idx}`);
+            btn.textContent = '적용 중...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/payments/manual', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: user.id,
+                        contract_id: contractId,
+                        paid_at: paidAt,
+                        amount: row.in,
+                        memo: row.memo || 'PDF 가져오기'
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || '적용 실패');
+
+                // Mark as applied
+                const item = btn.closest('.parsed-item');
+                item.classList.add('applied');
+                item.querySelector('.item-checkbox input').checked = true;
+                item.querySelector('.item-checkbox input').disabled = true;
+                btn.textContent = '적용 완료';
+                btn.disabled = true;
+
+                // Add to existingPayments to prevent re-application
+                existingPayments.push({
+                    contract_id: contractId,
+                    amount: row.in,
+                    paid_date: row.date
+                });
+
+                onCheckboxChange(idx);
+            } catch (e) {
+                alert('적용 오류: ' + e.message);
+                btn.textContent = '적용';
+                btn.disabled = false;
+            }
+        }
+
+        async function applyAll() {
+            const btn = document.getElementById('btn-apply-all');
+            btn.textContent = '적용 중...';
+            btn.disabled = true;
+
+            const toApply = [];
+            parsedRows.forEach((row, idx) => {
+                const cb = document.getElementById(`cb-${idx}`);
+                if (!cb || !cb.checked || cb.disabled) return;
+
+                const match = matchTenant(row.memo);
+                if (!match.contract) return;
+
+                const contractId = match.contract.id;
+                if (isAlreadyRegistered(row, contractId)) return;
+
+                toApply.push({ idx, row, contractId });
+            });
+
+            if (toApply.length === 0) {
+                alert('적용할 항목이 없습니다.');
+                btn.textContent = '전체 적용';
+                btn.disabled = false;
+                return;
+            }
+
+            const progressBar = document.getElementById('progress-bar');
+            progressBar.style.display = 'block';
+            progressBar.style.width = '0%';
+
+            let success = 0;
+            let fail = 0;
+
+            for (let i = 0; i < toApply.length; i++) {
+                const { idx, row, contractId } = toApply[i];
+                const paidAt = row.date + 'T' + (row.time || '12:00:00');
+
+                try {
+                    const res = await fetch('/api/payments/manual', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_id: user.id,
+                            contract_id: contractId,
+                            paid_at: paidAt,
+                            amount: row.in,
+                            memo: row.memo || 'PDF 가져오기'
+                        })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || '적용 실패');
+
+                    // Mark as applied
+                    const item = document.getElementById(`apply-${idx}`).closest('.parsed-item');
+                    item.classList.add('applied');
+                    item.querySelector('.item-checkbox input').checked = true;
+                    item.querySelector('.item-checkbox input').disabled = true;
+                    const applyBtn = document.getElementById(`apply-${idx}`);
+                    applyBtn.textContent = '적용 완료';
+                    applyBtn.disabled = true;
+
+                    existingPayments.push({
+                        contract_id: contractId,
+                        amount: row.in,
+                        paid_date: row.date
+                    });
+
+                    success++;
+                } catch (e) {
+                    console.error(`Apply failed for row ${idx}:`, e);
+                    fail++;
+                }
+
+                progressBar.style.width = `${((i + 1) / toApply.length) * 100}%`;
+            }
+
+            setTimeout(() => { progressBar.style.display = 'none'; }, 500);
+
+            btn.textContent = '전체 적용';
+            btn.disabled = false;
+
+            onCheckboxChange(0);
+
+            alert(`적용 완료: 성공 ${success}건${fail > 0 ? `, 실패 ${fail}건` : ''}`);
+        }
+
+        // ===== Helpers =====
+
+        function showLoading(show) {
+            document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+        }
+    </script>
+</body>
+
+</html>
