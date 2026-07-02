@@ -128,6 +128,16 @@
             background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.03) 5px, rgba(255,255,255,0.03) 10px);
             color: rgba(255, 255, 255, 0.2);
         }
+        .timeline-table th.current-month {
+            background: rgba(99, 102, 241, 0.2);
+            color: #a5b4fc;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .timeline-table td.current-month-cell {
+            background: rgba(99, 102, 241, 0.05);
+        }
         .tenant-name-small {
             font-size: 0.85rem;
             color: #f1f5f9;
@@ -673,11 +683,11 @@
                 <div class="timeline-container" id="timeline-container">
                     <div class="timeline-header">
                         <div class="calendar-nav">
-                            <button onclick="changeTimelineOffset(-6)">‹ 6개월</button>
+                            <button onclick="changeTimelineOffset(-6)">‹ 이전 6개월</button>
                             <span id="timeline-range-label" style="margin: 0 1rem; font-weight: 600;">타임라인</span>
-                            <button onclick="changeTimelineOffset(6)">6개월 ›</button>
+                            <button onclick="changeTimelineOffset(6)">최근 6개월 ›</button>
                         </div>
-                        <button class="btn-glass" onclick="resetTimeline()">오늘 기준</button>
+                        <button class="btn-glass" onclick="resetTimeline()">이번 달로</button>
                     </div>
                     <div class="timeline-scroll-area">
                         <table class="timeline-table">
@@ -762,15 +772,18 @@
             }
         }
 
-        let timelineOffsetMonths = -3; // Start from 3 months ago
+        let timelineOffsetMonths = 0; // 0 = start from current month, going backwards
 
         function resetTimeline() {
-            timelineOffsetMonths = -3;
+            timelineOffsetMonths = 0;
             renderTimeline();
         }
 
         function changeTimelineOffset(delta) {
-            timelineOffsetMonths += delta;
+            // delta = -6 for "이전" (older), +6 for "최근" (newer)
+            // Since months go backwards (descending), "이전" goes further back (offset increases)
+            timelineOffsetMonths -= delta;
+            if (timelineOffsetMonths < 0) timelineOffsetMonths = 0;
             renderTimeline();
         }
 
@@ -779,26 +792,32 @@
             const tBody = document.getElementById('timeline-body');
             if (!headRow || !tBody) return;
 
-            // Generate 12 months array based on offset
+            // Current month string for highlighting
+            const now = new Date();
+            const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+            // Generate 12 months in descending order (newest first, left to right)
             const months = [];
             const d = new Date();
-            d.setMonth(d.getMonth() + timelineOffsetMonths);
+            d.setMonth(d.getMonth() - timelineOffsetMonths); // start from this month going back
             
             for (let i = 0; i < 12; i++) {
                 months.push({
                     val: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-                    label: `${d.getMonth() + 1}월`
+                    label: `${d.getFullYear()}.${d.getMonth() + 1}월`,
+                    isCurrent: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === currentMonthStr
                 });
-                d.setMonth(d.getMonth() + 1);
+                d.setMonth(d.getMonth() - 1); // go backwards (older)
             }
 
-            document.getElementById('timeline-range-label').textContent = `${months[0].val} ~ ${months[11].val}`;
+            document.getElementById('timeline-range-label').textContent = `${months[0].label} ~ ${months[11].label}`;
 
             // Setup Header
             headRow.innerHTML = '<th class="col-sticky">호실 / 세입자</th>';
             months.forEach(m => {
                 const th = document.createElement('th');
                 th.textContent = m.label;
+                if (m.isCurrent) th.className = 'current-month';
                 headRow.appendChild(th);
             });
 
@@ -862,6 +881,7 @@
                     // Month Columns
                     months.forEach(m => {
                         const td = document.createElement('td');
+                        if (m.isCurrent) td.className = 'current-month-cell';
                         
                         // Check if month is within contract
                         const mStr = m.val;
