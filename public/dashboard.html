@@ -693,7 +693,7 @@
                         <table class="timeline-table">
                             <thead>
                                 <tr id="timeline-head-row">
-                                    <th class="col-sticky">호실 / 세입자</th>
+                                    <th class="col-sticky">건물 이름</th>
                                 </tr>
                             </thead>
                             <tbody id="timeline-body">
@@ -843,7 +843,7 @@
             });
 
             // Setup Header
-            headRow.innerHTML = '<th class="col-sticky">호실 / 세입자</th>';
+            headRow.innerHTML = '<th class="col-sticky">건물 이름</th>';
             months.forEach(m => {
                 const th = document.createElement('th');
                 th.textContent = m.label;
@@ -858,15 +858,16 @@
                 labelEl.textContent = `${months[0].val.substring(0, 4)}년`;
             }
 
-            // Group calendarData
-            const rooms = {};
+            // Group calendarData by building name
+            const buildings = {};
             if (Array.isArray(calendarData)) {
                 calendarData.forEach(row => {
-                    const rKey = `${row.building_name || ''} ${row.room_number ? row.room_number + '호' : ''}`.trim();
-                    if (!rooms[rKey]) rooms[rKey] = {};
-                    if (!rooms[rKey][row.contract_id]) {
-                        rooms[rKey][row.contract_id] = {
+                    const bKey = row.building_name || '기타';
+                    if (!buildings[bKey]) buildings[bKey] = {};
+                    if (!buildings[bKey][row.contract_id]) {
+                        buildings[bKey][row.contract_id] = {
                             tenant_name: row.tenant_nickname || '이름 없음',
+                            room_number: row.room_number || '',
                             start: row.contract_start_date || '2000-01-01',
                             end: row.contract_end_date || '2099-12-31',
                             color: row.tenant_color || '#6366f1',
@@ -874,7 +875,7 @@
                         };
                     }
                     if (row.bill_month) {
-                        rooms[rKey][row.contract_id].invoices[row.bill_month] = {
+                        buildings[bKey][row.contract_id].invoices[row.bill_month] = {
                             total: row.total_amount || 0,
                             paid: row.paid_amount || 0,
                             dates: row.paid_dates || ''
@@ -885,32 +886,33 @@
 
             tBody.innerHTML = '';
 
-            if (Object.keys(rooms).length === 0) {
+            if (Object.keys(buildings).length === 0) {
                 tBody.innerHTML = '<tr><td colspan="14" class="empty-state">계약 데이터가 없습니다.</td></tr>';
                 return;
             }
 
-            // Render Rows
-            for (const [rKey, contracts] of Object.entries(rooms)) {
-                // Room Group Header
+            // Render Rows - grouped by building
+            for (const [bKey, contracts] of Object.entries(buildings)) {
+                // Building Group Header
                 const trGroup = document.createElement('tr');
                 trGroup.className = 'room-group-row';
                 const tdGroup = document.createElement('td');
                 tdGroup.colSpan = 14;
-                tdGroup.innerHTML = `🏠 ${rKey}`;
+                tdGroup.innerHTML = `🏠 ${bKey}`;
                 trGroup.appendChild(tdGroup);
                 tBody.appendChild(trGroup);
 
-                // Contracts
+                // Contracts (tenant rows)
                 for (const [cId, cData] of Object.entries(contracts)) {
                     const tr = document.createElement('tr');
                     tr.className = 'tenant-row';
 
-                    // Sticky Column
+                    // Sticky Column - shows room number + tenant name
                     const tdSticky = document.createElement('td');
                     tdSticky.className = 'col-sticky';
+                    const roomLabel = cData.room_number ? `${cData.room_number}호 ` : '';
                     tdSticky.innerHTML = `
-                        <div class="tenant-name-small" style="color: ${cData.color}">${cData.tenant_name}</div>
+                        <div class="tenant-name-small" style="color: ${cData.color}">${roomLabel}${cData.tenant_name}</div>
                         <div class="tenant-period-small">${cData.start.substring(2).replace(/-/g,'.')} ~ ${cData.end.substring(2).replace(/-/g,'.')}</div>
                     `;
                     tr.appendChild(tdSticky);
