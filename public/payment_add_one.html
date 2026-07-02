@@ -209,6 +209,10 @@
                             <input type="date" id="mp-date" required>
                         </div>
                         <div class="form-group">
+                            <label>시간 <span style="color:#ef4444">*</span></label>
+                            <input type="time" id="mp-time" required>
+                        </div>
+                        <div class="form-group">
                             <label>금액 (원) <span style="color:#ef4444">*</span></label>
                             <input type="number" id="mp-amount" placeholder="300000" required>
                         </div>
@@ -272,7 +276,9 @@
         });
 
         async function initPage() {
-            document.getElementById('mp-date').value = new Date().toISOString().slice(0, 10);
+            const now = new Date();
+            document.getElementById('mp-date').value = now.toISOString().slice(0, 10);
+            document.getElementById('mp-time').value = now.toTimeString().slice(0, 5);
             document.getElementById('mp-amount').value = '';
             document.getElementById('mp-memo').value = '';
             document.getElementById('mp-result').style.display = 'none';
@@ -334,12 +340,15 @@
             event.preventDefault();
 
             const contractId = mpContractId || document.getElementById('mp-room').value;
-            const paidAt = document.getElementById('mp-date').value;
+            const paidDate = document.getElementById('mp-date').value;
+            const paidTime = document.getElementById('mp-time').value;
+            const paidAt = paidDate + 'T' + (paidTime || '12:00');
             const amount = parseInt(document.getElementById('mp-amount').value);
             const memo = document.getElementById('mp-memo').value;
 
             if (!contractId) return alert('건물과 호수를 선택하세요.');
-            if (!paidAt) return alert('날짜를 선택하세요.');
+            if (!paidDate) return alert('날짜를 선택하세요.');
+            if (!paidTime) return alert('시간을 선택하세요.');
             if (!amount || amount <= 0) return alert('올바른 금액을 입력하세요.');
 
             const btn = document.getElementById('mp-save-btn');
