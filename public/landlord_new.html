@@ -186,17 +186,17 @@
                     </div>
                     <div class="form-group">
                         <label>이름</label>
-                        <input type="text" id="nickname" readonly>
+                        <input type="text" id="nickname" placeholder="이름 입력">
                     </div>
                     <div class="form-group">
                         <label>생년월일</label>
-                        <input type="text" id="birth_date" placeholder="YYYY-MM-DD" readonly>
+                        <input type="text" id="birth_date" placeholder="YYYY-MM-DD">
                     </div>
                     <div class="form-group">
                         <label>전화번호</label>
-                        <input type="tel" id="phone_number" placeholder="010-0000-0000" readonly>
+                        <input type="tel" id="phone_number" placeholder="010-0000-0000">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" id="status-group" style="display:none;">
                         <label>상태</label>
                         <select id="status" onchange="updateStatusColor(this.value)">
                             <option value="신청">신청</option>
@@ -225,14 +225,19 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const userId = urlParams.get('id');
+        const isNewMode = !userId;
 
         async function loadUser() {
-            if (!userId) {
-                alert('잘못된 접근입니다.');
-                location.href = '/landlord_management.html';
+            if (isNewMode) {
+                // New landlord creation mode
+                document.getElementById('page-title').textContent = '임대인 추가';
+                document.getElementById('login_id').readOnly = false;
+                document.getElementById('login_id').placeholder = '아이디 입력';
+                document.getElementById('status-group').style.display = 'none';
                 return;
             }
 
+            // Edit mode - load existing user
             try {
                 const res = await fetch(`/api/users/${userId}`);
                 if (!res.ok) throw new Error('Failed to load user');
@@ -245,6 +250,7 @@
                 document.getElementById('phone_number').value = formatPhone(user.phone_number);
                 document.getElementById('status').value = user.status;
                 updateStatusColor(user.status);
+                document.getElementById('status-group').style.display = '';
 
             } catch (err) {
                 console.error(err);
@@ -266,24 +272,37 @@
                 return;
             }
 
+            if (isNewMode && !login_id) {
+                alert('아이디를 입력해주세요.');
+                return;
+            }
+
             try {
+                const body = {
+                    nickname: nickname,
+                    birth_date: birth_date,
+                    phone_number: phone_number,
+                    role: 'landlord'
+                };
+
+                if (isNewMode) {
+                    body.login_id = login_id;
+                } else {
+                    body.id = id;
+                    body.login_id = login_id;
+                    body.status = status;
+                }
+
                 const res = await fetch('/api/users/quick', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: id,
-                        login_id: login_id,
-                        nickname: nickname,
-                        birth_date: birth_date,
-                        phone_number: phone_number,
-                        status: status
-                    })
+                    body: JSON.stringify(body)
                 });
 
                 const data = await res.json();
                 if (res.ok) {
-                    alert('저장되었습니다.');
-                    location.reload();
+                    alert(isNewMode ? '임대인이 추가되었습니다.' : '저장되었습니다.');
+                    location.href = '/landlord_management.html';
                 } else {
                     alert('오류: ' + data.error);
                 }
