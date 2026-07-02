@@ -324,6 +324,30 @@
             z-index: 3000;
             display: none;
         }
+
+        .log-area {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.8rem;
+            display: none;
+        }
+
+        .log-area .log-line {
+            margin-bottom: 0.2rem;
+            line-height: 1.4;
+        }
+
+        .log-area .log-info { color: rgba(255, 255, 255, 0.7); }
+        .log-area .log-success { color: #4ade80; }
+        .log-area .log-error { color: #f87171; }
+        .log-area .log-warn { color: #fbbf24; }
+        .log-area .log-debug { color: #a5b4fc; }
     </style>
 </head>
 
@@ -345,6 +369,8 @@
                 <div class="upload-text">은행 거래내역 PDF 파일을 선택하세요</div>
                 <div class="upload-hint">PDF 파일을 파싱하여 납부 내역을 자동 매칭합니다</div>
             </div>
+
+            <div id="log-area" class="log-area"></div>
 
             <div id="list-area" style="display:none;">
                 <div class="list-toolbar">
@@ -449,24 +475,73 @@
             }
         }
 
+        // ===== Logging =====
+
+        function addLog(message, level = 'info') {
+            const logArea = document.getElementById('log-area');
+            if (!logArea) return;
+            logArea.style.display = 'block';
+            const line = document.createElement('div');
+            line.className = `log-line log-${level}`;
+            const now = new Date().toLocaleTimeString('ko-KR');
+            line.textContent = `[${now}] ${message}`;
+            logArea.appendChild(line);
+            logArea.scrollTop = logArea.scrollHeight;
+            console.log(`[PDF] ${message}`);
+        }
+
+        function clearLog() {
+            const logArea = document.getElementById('log-area');
+            if (logArea) {
+                logArea.innerHTML = '';
+                logArea.style.display = 'none';
+            }
+        }
+
         // ===== PDF Upload & Parse =====
 
         async function handlePdfUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
+            clearLog();
             showLoading(true);
 
             try {
+                addLog(`파일명: ${file.name}, 크기: ${(file.size / 1024).toFixed(1)}KB`, 'info');
+
+                // Step 1: Read file as ArrayBuffer
+                addLog('파일 읽는 중...', 'debug');
                 const arrayBuffer = await file.arrayBuffer();
+
+                // Step 2: Validate PDF header
+                const header = new TextDecoder().decode(arrayBuffer.slice(0, 5));
+                if (header !== '%PDF-') {
+                    addLog(`유효한 PDF가 아닙니다. 헤더: ${header}`, 'error');
+                    addLog('DRM 보호 파일이거나 손상된 파일일 수 있습니다.', 'warn');
+                    alert('유효한 PDF 파일이 아닙니다.');
+                    showLoading(false);
+                    return;
+                }
+                addLog('PDF 파일 검증 완료', 'success');
+
+                // Step 3: Parse PDF with pdf.js
+                addLog('PDF 문서 로드 중...', 'debug');
                 const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                addLog(`총 ${pdf.numPages}페이지`, 'info');
+
                 let fullText = '';
 
                 for (let i = 1; i <= pdf.numPages; i++) {
+                    addLog(`페이지 ${i}/${pdf.numPages} 텍스트 추출 중...`, 'debug');
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
                     const items = textContent.items.filter(item => item.str.trim().length > 0);
-                    if (items.length === 0) continue;
+                    if (items.length === 0) {
+                        addLog(`페이지 ${i}: 텍스트 없음 (스캔 이미지일 수 있음)`, 'warn');
+                        continue;
+                    }
+                    addLog(`페이지 ${i}: ${items.length}개 텍스트 항목`, 'debug');
 
                     let lastY = items[0].transform[5];
                     let currentLine = '';
@@ -485,9 +560,21 @@
                     }
                 }
 
+                addLog(`총 텍스트 길이: ${fullText.length}자`, 'info');
+
+                // Show first 200 chars for debugging
+                if (fullText.length > 0) {
+                    addLog(`텍스트 미리보기: ${fullText.substring(0, 200).replace(/\n/g, ' | ')}`, 'debug');
+                }
+
+                // Step 4: Parse text into rows
+                addLog('텍스트 파싱 중...', 'debug');
                 const rows = parsePdfText(fullText);
+                addLog(`파싱 결과: ${rows.length}개 행 (입금 ${rows.filter(r => r.in > 0).length}건, 출금 ${rows.filter(r => r.out > 0).length}건)`, 'info');
 
                 if (rows.length === 0) {
+                    addLog('거래 내역을 찾을 수 없습니다.', 'error');
+                    addLog('PDF 형식이 지원되지 않을 수 있습니다.', 'warn');
                     alert('PDF에서 거래 내역을 찾을 수 없습니다.');
                     showLoading(false);
                     return;
@@ -495,21 +582,33 @@
 
                 // Only keep deposit rows (in > 0)
                 parsedRows = rows.filter(r => r.in > 0);
+                addLog(`입금 내역만 필터링: ${parsedRows.length}건`, 'info');
 
                 if (parsedRows.length === 0) {
+                    addLog('입금 내역이 없습니다.', 'warn');
                     alert('입금 내역이 없습니다.');
                     showLoading(false);
                     return;
                 }
 
-                // Match tenants and check existing payments
+                // Step 5: Check existing payments
+                addLog(`활성 계약 수: ${activeContracts.length}건`, 'info');
+                addLog('기존 납부 내역 확인 중...', 'debug');
                 await checkExistingPayments();
+                addLog(`기존 납부 내역: ${existingPayments.length}건`, 'info');
+
+                // Step 6: Render list
+                addLog('리스트 렌더링 중...', 'debug');
                 renderList();
 
                 document.getElementById('upload-area').style.display = 'none';
                 document.getElementById('list-area').style.display = 'block';
 
+                addLog('PDF 파싱 완료!', 'success');
+
             } catch (err) {
+                addLog(`오류 발생: ${err.message}`, 'error');
+                addLog(`스택: ${err.stack || 'N/A'}`, 'error');
                 console.error('PDF 파싱 오류:', err);
                 alert('PDF 파일을 읽는 중 오류가 발생했습니다: ' + err.message);
             } finally {
