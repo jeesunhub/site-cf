@@ -683,9 +683,9 @@
                 <div class="timeline-container" id="timeline-container">
                     <div class="timeline-header">
                         <div class="calendar-nav">
-                            <button onclick="changeTimelineOffset(-6)">‹ 이전 6개월</button>
-                            <span id="timeline-range-label" style="margin: 0 1rem; font-weight: 600;">타임라인</span>
-                            <button onclick="changeTimelineOffset(6)">최근 6개월 ›</button>
+                            <button onclick="changeTimelineOffset(-6)">‹</button>
+                            <span id="timeline-range-label" style="margin: 0 1rem; font-weight: 600; min-width: 80px; text-align: center;">타임라인</span>
+                            <button onclick="changeTimelineOffset(6)">›</button>
                         </div>
                         <button class="btn-glass" onclick="resetTimeline()">이번 달로</button>
                     </div>
@@ -751,6 +751,9 @@
                 slider.scrollLeft = scrollLeft - walk;
             });
             slider.style.cursor = 'grab';
+
+            // Update year label on scroll
+            slider.addEventListener('scroll', updateYearLabel);
         }
 
         function switchListView(view) {
@@ -812,7 +815,8 @@
                 d.setMonth(d.getMonth() + 1); // go forward (newer)
             }
 
-            document.getElementById('timeline-range-label').textContent = `${months[0].label} ~ ${months[11].label}`;
+            // Label will be updated by updateYearLabel() based on scroll position
+            updateYearLabel();
 
             // Setup Header
             headRow.innerHTML = '<th class="col-sticky">호실 / 세입자</th>';
@@ -921,8 +925,48 @@
                 const scrollArea = document.querySelector('.timeline-scroll-area');
                 if (scrollArea) {
                     scrollArea.scrollLeft = scrollArea.scrollWidth;
+                    updateYearLabel();
                 }
             });
+        }
+
+        // Update the year label based on which month column is visible right next to the sticky column
+        function updateYearLabel() {
+            const scrollArea = document.querySelector('.timeline-scroll-area');
+            const label = document.getElementById('timeline-range-label');
+            const headRow = document.getElementById('timeline-head-row');
+            if (!scrollArea || !label || !headRow) return;
+
+            // Get all month header cells (skip the sticky column)
+            const ths = headRow.querySelectorAll('th:not(.col-sticky)');
+            if (ths.length === 0) return;
+
+            // The sticky column width
+            const stickyCol = headRow.querySelector('.col-sticky');
+            const stickyWidth = stickyCol ? stickyCol.offsetWidth : 130;
+
+            // Find which month header is closest to the right edge of the sticky column
+            const scrollLeft = scrollArea.scrollLeft;
+            const viewportLeft = scrollLeft + stickyWidth;
+            
+            let visibleTh = null;
+            for (const th of ths) {
+                const thLeft = th.offsetLeft;
+                const thRight = thLeft + th.offsetWidth;
+                if (thRight > viewportLeft) {
+                    visibleTh = th;
+                    break;
+                }
+            }
+
+            if (visibleTh) {
+                // Extract year from the label (format: "2026.7월")
+                const text = visibleTh.textContent;
+                const yearMatch = text.match(/(\d{4})\./);
+                if (yearMatch) {
+                    label.textContent = `${yearMatch[1]}년`;
+                }
+            }
         }
 
         function formatShortDate(datesStr) {
