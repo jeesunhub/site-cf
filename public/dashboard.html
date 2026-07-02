@@ -814,9 +814,6 @@
                 d.setMonth(d.getMonth() - 1); // go backwards (older)
             }
 
-            // Label will be updated by updateYearLabel() based on scroll position
-            updateYearLabel();
-
             // Setup Header
             headRow.innerHTML = '<th class="col-sticky">호실 / 세입자</th>';
             months.forEach(m => {
@@ -826,6 +823,12 @@
                 if (m.isCurrent) th.className = 'current-month';
                 headRow.appendChild(th);
             });
+
+            // Set initial year label from the first (newest) month
+            const labelEl = document.getElementById('timeline-range-label');
+            if (labelEl && months.length > 0) {
+                labelEl.textContent = `${months[0].val.substring(0, 4)}년`;
+            }
 
             // Group calendarData
             const rooms = {};
