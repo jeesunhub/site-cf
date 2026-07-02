@@ -336,7 +336,7 @@
     <!-- Navbar will be rendered by JS -->
     <div class="header" id="sticky-header">
         <h1 id="page-title">계약 등록/수정</h1>
-        <button type="button" id="btn-contract-attachments" class="btn-inline" style="display: none; font-size: 0.85rem;" onclick="openAttachments()">
+        <button type="button" id="btn-contract-attachments" style="display: none; font-size: 0.85rem; background: none; border: none; color: var(--accent); font-weight: 600; cursor: pointer; opacity: 0.8;" onclick="openAttachments()" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">
             📎 계약서 첨부 (<span id="attachment-count">0</span>)
         </button>
     </div>
