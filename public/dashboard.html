@@ -141,13 +141,23 @@
             background: rgba(99, 102, 241, 0.05);
         }
         .tenant-name-small {
-            font-size: 0.85rem;
+            font-size: 0.7rem;
             color: #f1f5f9;
             overflow: hidden;
             text-overflow: ellipsis;
+            white-space: nowrap;
+            line-height: 1.2;
+        }
+        .tenant-room-small {
+            font-size: 0.65rem;
+            color: rgba(255,255,255,0.6);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            line-height: 1.2;
         }
         .tenant-period-small {
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             color: rgba(255,255,255,0.5);
             display: block;
             margin-top: 2px;
@@ -910,12 +920,13 @@
                     const tr = document.createElement('tr');
                     tr.className = 'tenant-row';
 
-                    // Sticky Column - shows room number + tenant name only
+                    // Sticky Column - shows room number and tenant name on separate lines
                     const tdSticky = document.createElement('td');
                     tdSticky.className = 'col-sticky';
-                    const roomLabel = cData.room_number ? `${cData.room_number}호 ` : '';
+                    const roomLabel = cData.room_number ? `${cData.room_number}호` : '';
                     tdSticky.innerHTML = `
-                        <div class="tenant-name-small" style="color: ${cData.color}">${roomLabel}${cData.tenant_name}</div>
+                        <div class="tenant-room-small">${roomLabel}</div>
+                        <div class="tenant-name-small" style="color: ${cData.color}">${cData.tenant_name}</div>
                     `;
                     tr.appendChild(tdSticky);
 
