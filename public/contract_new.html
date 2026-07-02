@@ -861,12 +861,122 @@
             }
         }
 
-        function openAttachments() {
+        async function openAttachments() {
             if (!activeContractId) {
-                alert('계약을 먼저 저장한 후 첨부할 수 있습니다.');
-                return;
+                // Save contract first, then navigate to attachments
+                const saved = await submitContractForAttachments();
+                if (!saved) return;
             }
             window.location.href = `contract_attachments.html?contract_id=${activeContractId}`;
+        }
+
+        async function submitContractForAttachments() {
+            const data = {
+                landlord_id: user.id,
+                tenant_name: document.getElementById('tenant-name').value,
+                tenant_dob: document.getElementById('tenant-dob').value,
+                tenant_phone: document.getElementById('tenant-phone').value,
+                building_id: document.getElementById('contract-building').value,
+                room_id: document.getElementById('contract-room').value,
+                start_date: document.getElementById('contract-start').value,
+                end_date: document.getElementById('contract-end').value,
+                deposit: unformatCurrency(document.getElementById('contract-deposit').value),
+                monthly_rent: unformatCurrency(document.getElementById('contract-rent').value),
+                management_fee: unformatCurrency(document.getElementById('contract-fee').value),
+                cleaning_fee: unformatCurrency(document.getElementById('contract-cleaning').value),
+                payment_type: document.getElementById('contract-payment-type').value
+            };
+
+            if (!data.tenant_name || !data.building_id || !data.room_id) {
+                alert('계약서 첨부를 위해 먼저 세입자 이름, 건물, 호수를 입력해주세요.');
+                return false;
+            }
+
+            try {
+                const existingUserId = await fetchUserId(data.tenant_name, data.tenant_dob);
+                let targetUserId = existingUserId;
+
+                if (!targetUserId && currentAction === 'change') {
+                    targetUserId = currentTenantId;
+                }
+
+                const userSavePayload = {
+                    id: targetUserId,
+                    password: '1234',
+                    nickname: data.tenant_name,
+                    role: 'tenant',
+                    birth_date: data.tenant_dob,
+                    phone_number: data.tenant_phone,
+                    building_id: data.building_id,
+                    status: '승인',
+                    approved: 1
+                };
+
+                if (!targetUserId && !userSavePayload.login_id) {
+                    userSavePayload.login_id = data.tenant_name + (data.tenant_dob || '').replace(/-/g, '').slice(2);
+                }
+
+                const userRes = await fetch('/api/users/quick', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userSavePayload)
+                });
+                const userData = await userRes.json();
+                if (!userRes.ok) throw new Error(userData.error || '세입자 정보 저장 실패');
+                data.tenant_id = userData.userId;
+
+                const rSelect = document.getElementById('contract-room');
+                let roomText = rSelect.options[rSelect.selectedIndex] ? rSelect.options[rSelect.selectedIndex].text : '';
+                if (roomText && roomText.includes('호')) {
+                    roomText = roomText.replace(/[^0-9]/g, '') + '호';
+                }
+                const newKeywords = [data.tenant_name];
+                if (roomText && roomText !== '호') newKeywords.push(roomText);
+                const totalMonthly = (data.monthly_rent || 0) + (data.management_fee || 0) + (data.cleaning_fee || 0);
+                if (totalMonthly > 0) newKeywords.push(String(totalMonthly));
+
+                const payload = {
+                    tenant_id: data.tenant_id,
+                    landlord_id: data.landlord_id,
+                    payment_type: data.payment_type,
+                    contract_start_date: data.start_date,
+                    contract_end_date: data.end_date,
+                    deposit: data.deposit,
+                    monthly_rent: data.monthly_rent,
+                    management_fee: data.management_fee,
+                    cleaning_fee: data.cleaning_fee,
+                    room_id: data.room_id,
+                    keywords: newKeywords
+                };
+
+                let url = '/api/contracts/full';
+                let method = 'POST';
+                if (activeContractId) {
+                    url = `/api/contracts/${activeContractId}`;
+                    method = 'PUT';
+                }
+
+                const contractRes = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (contractRes.ok) {
+                    const contractData = await contractRes.json();
+                    activeContractId = contractData.contractId;
+                    currentAction = 'change';
+                    return true;
+                } else {
+                    const errData = await contractRes.json();
+                    alert('계약 저장 실패: ' + (errData.error || '알 수 없는 오류'));
+                    return false;
+                }
+            } catch (err) {
+                console.error(err);
+                alert('오류가 발생했습니다: ' + err.message);
+                return false;
+            }
         }
 
         let allTenantsList = [];
