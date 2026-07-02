@@ -1670,6 +1670,56 @@ app.get('/api/contract/:id/full-details', (req, res) => {
     });
 });
 
+// Contract Attachments - Get list
+app.get('/api/contracts/:id/attachments', (req, res) => {
+    const contractId = req.params.id;
+    db.all(`SELECT * FROM images WHERE related_id = ? AND related_table = 'contracts' ORDER BY id ASC`, [contractId], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows || []);
+    });
+});
+
+// Contract Attachments - Upload
+app.post('/api/contracts/:id/attachments', upload.array('files', 10), (req, res) => {
+    const contractId = req.params.id;
+    if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'No files uploaded' });
+
+    const stmt = db.prepare(`INSERT INTO images(related_id, image_url, is_main, related_table) VALUES(?, ?, 0, 'contracts')`);
+    const results = [];
+    req.files.forEach((file, idx) => {
+        stmt.run([contractId, `/uploads/${file.filename}`], function(err) {
+            if (err) {
+                console.error('Insert error:', err);
+            } else {
+                results.push({ id: this.lastID, image_url: `/uploads/${file.filename}` });
+            }
+            if (idx === req.files.length - 1) {
+                stmt.finalize();
+                res.json({ success: true, attachments: results });
+            }
+        });
+    });
+});
+
+// Contract Attachments - Delete
+app.delete('/api/contracts/:id/attachments/:imageId', (req, res) => {
+    const { id: contractId, imageId } = req.params;
+    db.get(`SELECT image_url FROM images WHERE id = ? AND related_id = ? AND related_table = 'contracts'`, [imageId, contractId], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!row) return res.status(404).json({ error: 'Attachment not found' });
+
+        // Delete file from disk
+        const filePath = path.join(__dirname, row.image_url);
+        fs.unlink(filePath, (unlinkErr) => {
+            // Ignore unlink errors (file may not exist)
+            db.run(`DELETE FROM images WHERE id = ? AND related_id = ? AND related_table = 'contracts'`, [imageId, contractId], (delErr) => {
+                if (delErr) return res.status(500).json({ error: delErr.message });
+                res.json({ success: true });
+            });
+        });
+    });
+});
+
 // 9. Get Calendar Data for Tenant
 app.get('/api/tenant/:id/calendar-data', (req, res) => {
     const tenantId = req.params.id;
