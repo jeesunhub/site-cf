@@ -772,7 +772,7 @@
             }
         }
 
-        let timelineOffsetMonths = 0; // 0 = start from current month, going backwards
+        let timelineOffsetMonths = 0; // 0 = current month is the newest (rightmost)
 
         function resetTimeline() {
             timelineOffsetMonths = 0;
@@ -780,8 +780,8 @@
         }
 
         function changeTimelineOffset(delta) {
-            // delta = -6 for "이전" (older), +6 for "최근" (newer)
-            // Since months go backwards (descending), "이전" goes further back (offset increases)
+            // delta = -6 for "이전" (older, more months back), +6 for "최근" (newer)
+            // Since months go backwards from current, "이전" increases offset (more past months)
             timelineOffsetMonths -= delta;
             if (timelineOffsetMonths < 0) timelineOffsetMonths = 0;
             renderTimeline();
@@ -796,10 +796,12 @@
             const now = new Date();
             const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-            // Generate 12 months in descending order (newest first, left to right)
+            // Generate 12 months in ascending order (oldest first on left, newest on right)
+            // Start from the oldest month (11 months before current - offset)
             const months = [];
             const d = new Date();
-            d.setMonth(d.getMonth() - timelineOffsetMonths); // start from this month going back
+            d.setMonth(d.getMonth() - timelineOffsetMonths); // newest month
+            d.setMonth(d.getMonth() - 11); // go back 11 months to get the oldest
             
             for (let i = 0; i < 12; i++) {
                 months.push({
@@ -807,7 +809,7 @@
                     label: `${d.getFullYear()}.${d.getMonth() + 1}월`,
                     isCurrent: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === currentMonthStr
                 });
-                d.setMonth(d.getMonth() - 1); // go backwards (older)
+                d.setMonth(d.getMonth() + 1); // go forward (newer)
             }
 
             document.getElementById('timeline-range-label').textContent = `${months[0].label} ~ ${months[11].label}`;
@@ -913,6 +915,14 @@
                     tBody.appendChild(tr);
                 }
             }
+
+            // Auto-scroll to the right (newest month) after render
+            requestAnimationFrame(() => {
+                const scrollArea = document.querySelector('.timeline-scroll-area');
+                if (scrollArea) {
+                    scrollArea.scrollLeft = scrollArea.scrollWidth;
+                }
+            });
         }
 
         function formatShortDate(datesStr) {
