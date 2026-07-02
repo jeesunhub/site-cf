@@ -85,8 +85,8 @@
             background: #1e293b;
             z-index: 11;
             text-align: left !important;
-            min-width: 130px;
-            max-width: 150px;
+            min-width: 65px;
+            max-width: 75px;
             box-shadow: 2px 0 5px rgba(0,0,0,0.2);
         }
         .timeline-table th.col-sticky {
@@ -124,6 +124,8 @@
         .badge-green { background: rgba(16, 185, 129, 0.2); color: #10b981; }
         .badge-yellow { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
         .badge-red { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .badge-purple { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+        .badge-gray-text { background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.4); }
         .badge-gray {
             background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.03) 5px, rgba(255,255,255,0.03) 10px);
             color: rgba(255, 255, 255, 0.2);
@@ -878,7 +880,8 @@
                         buildings[bKey][row.contract_id].invoices[row.bill_month] = {
                             total: row.total_amount || 0,
                             paid: row.paid_amount || 0,
-                            dates: row.paid_dates || ''
+                            due_date: row.due_date || '',
+                            paid_dates: row.paid_dates || ''
                         };
                     }
                 });
@@ -907,13 +910,12 @@
                     const tr = document.createElement('tr');
                     tr.className = 'tenant-row';
 
-                    // Sticky Column - shows room number + tenant name
+                    // Sticky Column - shows room number + tenant name only
                     const tdSticky = document.createElement('td');
                     tdSticky.className = 'col-sticky';
                     const roomLabel = cData.room_number ? `${cData.room_number}호 ` : '';
                     tdSticky.innerHTML = `
                         <div class="tenant-name-small" style="color: ${cData.color}">${roomLabel}${cData.tenant_name}</div>
-                        <div class="tenant-period-small">${cData.start.substring(2).replace(/-/g,'.')} ~ ${cData.end.substring(2).replace(/-/g,'.')}</div>
                     `;
                     tr.appendChild(tdSticky);
 
@@ -948,16 +950,52 @@
                             if (!inv) {
                                 td.innerHTML = '<span style="color: rgba(255,255,255,0.3); font-size: 0.7rem;">-</span>';
                             } else {
-                                if (inv.paid >= inv.total) {
-                                    td.innerHTML = `<span class="badge badge-green">${formatShortDate(inv.dates) || '완납'}</span>`;
-                                    td.title = `청구: ${formatCurrency(inv.total)}원 / 완납`;
-                                } else if (inv.paid > 0) {
-                                    td.innerHTML = `<span class="badge badge-yellow">${formatShortDate(inv.dates)}</span>`;
-                                    td.title = `청구: ${formatCurrency(inv.total)}원 / 입금: ${formatCurrency(inv.paid)}원`;
-                                } else {
-                                    td.innerHTML = '<span class="badge badge-red">미납</span>';
-                                    td.title = `청구: ${formatCurrency(inv.total)}원 / 미납`;
+                                // Format due date as MM.DD
+                                const dueDateShort = inv.due_date ? inv.due_date.substring(5).replace('-', '.') : '';
+                                // Parse paid dates (comma-separated)
+                                const paidDateArr = inv.paid_dates ? inv.paid_dates.split(',').filter(d => d.trim()) : [];
+                                const paidDateShorts = paidDateArr.map(d => d.trim().substring(5).replace('-', '.'));
+
+                                const isFullyPaid = inv.paid >= inv.total && inv.total > 0;
+                                const isPartial = inv.paid > 0 && inv.paid < inv.total;
+                                const isUnpaid = inv.paid === 0;
+
+                                // Check if due date has passed
+                                const today = new Date().toISOString().substring(0, 10);
+                                const isBeforeDue = inv.due_date && today < inv.due_date;
+
+                                let badgeClass = 'badge-red';
+                                let cellText = '';
+
+                                if (isFullyPaid) {
+                                    badgeClass = 'badge-green';
+                                    // Show due_date/paid_date for each payment
+                                    if (paidDateShorts.length > 0) {
+                                        cellText = paidDateShorts.map(pd => `${dueDateShort}/${pd}`).join('<br>');
+                                    } else {
+                                        cellText = `${dueDateShort}/완납`;
+                                    }
+                                } else if (isPartial) {
+                                    // Partial payment that completes the month → green
+                                    // Otherwise → purple
+                                    badgeClass = 'badge-purple';
+                                    if (paidDateShorts.length > 0) {
+                                        cellText = paidDateShorts.map(pd => `${dueDateShort}/${pd}`).join('<br>');
+                                    } else {
+                                        cellText = `${dueDateShort}/?`;
+                                    }
+                                } else if (isUnpaid) {
+                                    if (isBeforeDue) {
+                                        badgeClass = 'badge-gray-text';
+                                        cellText = dueDateShort;
+                                    } else {
+                                        badgeClass = 'badge-red';
+                                        cellText = dueDateShort || '미납';
+                                    }
                                 }
+
+                                td.innerHTML = `<span class="badge ${badgeClass}" style="font-size:0.65rem; line-height:1.4;">${cellText}</span>`;
+                                td.title = `청구: ${formatCurrency(inv.total)}원 / 입금: ${formatCurrency(inv.paid)}원`;
                             }
                         }
                         tr.appendChild(td);
