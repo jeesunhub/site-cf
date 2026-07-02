@@ -931,6 +931,12 @@
                             td.innerHTML = '<span class="badge badge-gray">-</span>';
                             td.title = '계약 기간 외';
                         } else {
+                            // Add colored border for contract period cells
+                            td.style.borderLeft = `2px solid ${cData.color}`;
+                            td.style.borderRight = `2px solid ${cData.color}`;
+                            td.style.borderTop = `1px solid ${cData.color}40`;
+                            td.style.borderBottom = `1px solid ${cData.color}40`;
+
                             const inv = cData.invoices[mStr];
                             if (!inv) {
                                 td.innerHTML = '<span style="color: rgba(255,255,255,0.3); font-size: 0.7rem;">-</span>';
