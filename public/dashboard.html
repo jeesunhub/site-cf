@@ -780,6 +780,16 @@
         function resetTimeline() {
             timelineOffsetMonths = 0;
             renderTimeline();
+            // Ensure scroll to left (current month next to sticky column)
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    const scrollArea = document.querySelector('.timeline-scroll-area');
+                    if (scrollArea) {
+                        scrollArea.scrollTo({ left: 0, behavior: 'smooth' });
+                        updateYearLabel();
+                    }
+                });
+            });
         }
 
         function changeTimelineOffset(delta) {
