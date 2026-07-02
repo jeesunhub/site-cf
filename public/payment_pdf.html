@@ -147,6 +147,10 @@
             border-color: rgba(34, 197, 94, 0.3);
         }
 
+        .parsed-item.low-match {
+            opacity: 0.5;
+        }
+
         .item-checkbox {
             display: flex;
             align-items: center;
@@ -881,6 +885,7 @@
                 const item = document.createElement('div');
                 item.className = 'parsed-item';
                 if (isRegistered) item.classList.add('registered');
+                if (!isRegistered && !isHighMatch) item.classList.add('low-match');
 
                 // Checkbox
                 const checkboxChecked = isRegistered || isHighMatch ? 'checked' : '';
