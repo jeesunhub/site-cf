@@ -918,7 +918,7 @@
                     tr.appendChild(tdSticky);
 
                     // Month Columns
-                    months.forEach(m => {
+                    months.forEach((m, mIdx) => {
                         const td = document.createElement('td');
                         if (m.isCurrent) td.className = 'current-month-cell';
                         
@@ -931,11 +931,18 @@
                             td.innerHTML = '<span class="badge badge-gray">-</span>';
                             td.title = '계약 기간 외';
                         } else {
-                            // Add colored border for contract period cells
-                            td.style.borderLeft = `2px solid ${cData.color}`;
-                            td.style.borderRight = `2px solid ${cData.color}`;
-                            td.style.borderTop = `1px solid ${cData.color}40`;
-                            td.style.borderBottom = `1px solid ${cData.color}40`;
+                            // Single continuous border around the entire contract period
+                            // Top and bottom borders on all contract cells
+                            td.style.borderTop = `2px solid ${cData.color}`;
+                            td.style.borderBottom = `2px solid ${cData.color}`;
+                            // Left border only on the first contract month
+                            if (mIdx === 0 || months[mIdx - 1].val < sStr) {
+                                td.style.borderLeft = `2px solid ${cData.color}`;
+                            }
+                            // Right border only on the last contract month
+                            if (mIdx === months.length - 1 || months[mIdx + 1].val > eStr) {
+                                td.style.borderRight = `2px solid ${cData.color}`;
+                            }
 
                             const inv = cData.invoices[mStr];
                             if (!inv) {
