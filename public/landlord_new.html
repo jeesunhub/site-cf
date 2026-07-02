@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>임대인 상세 정보 - Sugar</title>
+    <title>임대인 등록 - Sugar</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
     <style>
@@ -15,11 +15,11 @@
 
         .form-container {
             max-width: 800px;
-            margin: 2rem auto;
-            padding: 0 1.5rem;
+            margin: 0 auto;
+            padding: 0;
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 1.5rem;
         }
 
         .form-section {
@@ -35,6 +35,7 @@
             padding-bottom: 0.5rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             color: var(--primary);
+            margin-top: 0;
         }
 
         .form-grid {
@@ -54,6 +55,7 @@
             color: #94a3b8;
             font-weight: 400;
             opacity: 1;
+            margin-bottom: 0.3rem;
         }
 
         .form-group input,
@@ -65,7 +67,6 @@
             color: #f8fafc;
             font-size: 1rem;
             font-family: inherit;
-            width: 100%;
         }
 
         .form-group input:focus,
@@ -123,16 +124,52 @@
             color: #f87171;
         }
 
-        .action-bar {
+        .action-btns {
             display: flex;
-            justify-content: flex-end;
-            gap: 1rem;
+            gap: 0.4rem;
             margin-top: 2rem;
+            padding-bottom: 2rem;
         }
 
-        .action-bar-right {
+        .btn {
+            flex: 1;
+            height: 3.2rem;
+            padding: 0 1rem;
+            border-radius: 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
             display: flex;
-            gap: 0.5rem;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-submit {
+            background: rgba(99, 102, 241, 0.3);
+            color: white;
+            border: 1px solid rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-submit:hover {
+            background: rgba(99, 102, 241, 0.45);
+            border-color: rgba(99, 102, 241, 0.6);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.2);
         }
 
         .header {
@@ -144,7 +181,6 @@
             backdrop-filter: blur(10px);
             position: sticky;
             top: 70px;
-            /* Navbar height */
             z-index: 100;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             height: 3.5rem;
@@ -161,7 +197,7 @@
         }
 
         .container {
-            margin-top: 0 !important;
+            margin: 0 !important;
             padding-top: 0.5rem;
         }
     </style>
@@ -169,57 +205,60 @@
 
 <body id="page-body" class="has-back-button">
     <!-- Navbar will be rendered by JS -->
+    
     <div class="header" id="sticky-header">
-        <h1 id="page-title">임대인 상세 정보</h1>
+        <h1 id="page-title">임대인 등록/수정</h1>
     </div>
 
     <div class="container" id="main-content">
-        <div class="form-container">
+        <form id="landlord-form" onsubmit="updateUser(event)">
             <input type="hidden" id="user_id">
 
-            <div class="form-section">
-                <h2>👤 기본 정보</h2>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>아이디</label>
-                        <input type="text" id="login_id" readonly>
+            <div class="form-container">
+                <div class="form-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 0.12rem; padding-bottom: 0.5rem;">
+                        <h2 style="border:none; margin:0; padding:0;">👤 임대인 정보</h2>
                     </div>
-                    <div class="form-group">
-                        <label>이름</label>
-                        <input type="text" id="nickname" placeholder="이름 입력">
-                    </div>
-                    <div class="form-group">
-                        <label>생년월일</label>
-                        <input type="text" id="birth_date" placeholder="YYYY-MM-DD">
-                    </div>
-                    <div class="form-group">
-                        <label>전화번호</label>
-                        <input type="tel" id="phone_number" placeholder="010-0000-0000">
-                    </div>
-                    <div class="form-group" id="status-group" style="display:none;">
-                        <label>상태</label>
-                        <select id="status" onchange="updateStatusColor(this.value)">
-                            <option value="신청">신청</option>
-                            <option value="승인">승인</option>
-                            <option value="종료">종료</option>
-                        </select>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>아이디 <span style="color:#ef4444">*</span></label>
+                            <input type="text" id="login_id" placeholder="아이디를 입력하세요" required>
+                        </div>
+                        <div class="form-group">
+                            <label>이름 <span style="color:#ef4444">*</span></label>
+                            <input type="text" id="nickname" placeholder="임대인 이름을 입력하세요" required>
+                        </div>
+                        <div class="form-group">
+                            <label>연락처</label>
+                            <input type="tel" id="phone_number" placeholder="010-0000-0000" oninput="this.value = formatPhone(this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>생년월일</label>
+                            <input type="date" id="birth_date">
+                        </div>
+                        <div class="form-group" id="status-group" style="display:none;">
+                            <label>상태</label>
+                            <select id="status" onchange="updateStatusColor(this.value)">
+                                <option value="신청">신청</option>
+                                <option value="승인">승인</option>
+                                <option value="종료">종료</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="action-bar">
-                <div></div>
-                <div class="action-bar-right">
-                    <button class="btn" onclick="updateUser()">저장</button>
+                <div class="action-btns">
+                    <button type="button" class="btn btn-cancel" onclick="history.back()">취소</button>
+                    <button type="submit" class="btn btn-submit">저장하기</button>
                 </div>
             </div>
-        </div>
+        </form>
     </div>
 
     <script src="/js/common.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            renderNavbar(); // Ensure navbar is rendered
+            renderNavbar();
             loadUser();
         });
 
@@ -229,10 +268,7 @@
 
         async function loadUser() {
             if (isNewMode) {
-                // New landlord creation mode
                 document.getElementById('page-title').textContent = '임대인 추가';
-                document.getElementById('login_id').readOnly = false;
-                document.getElementById('login_id').placeholder = '아이디 입력';
                 document.getElementById('status-group').style.display = 'none';
                 return;
             }
@@ -245,12 +281,14 @@
 
                 document.getElementById('user_id').value = user.id;
                 document.getElementById('login_id').value = user.login_id;
+                document.getElementById('login_id').readOnly = true;
                 document.getElementById('nickname').value = user.nickname;
                 document.getElementById('birth_date').value = user.birth_date;
                 document.getElementById('phone_number').value = formatPhone(user.phone_number);
                 document.getElementById('status').value = user.status;
                 updateStatusColor(user.status);
                 document.getElementById('status-group').style.display = '';
+                document.getElementById('page-title').textContent = '임대인 정보 수정';
 
             } catch (err) {
                 console.error(err);
@@ -259,21 +297,23 @@
             }
         }
 
-        async function updateUser() {
+        async function updateUser(e) {
+            e.preventDefault();
+            const btn = document.querySelector('.btn-submit');
+            btn.disabled = true;
+            btn.textContent = '저장 중...';
+
             const id = document.getElementById('user_id').value;
-            const nickname = document.getElementById('nickname').value;
-            const birth_date = document.getElementById('birth_date').value;
+            const nickname = document.getElementById('nickname').value.trim();
+            const birth_date = document.getElementById('birth_date').value.trim();
             const phone_number = document.getElementById('phone_number').value.replace(/[^0-9]/g, '');
-            const login_id = document.getElementById('login_id').value;
+            const login_id = document.getElementById('login_id').value.trim();
             const status = document.getElementById('status').value;
 
-            if (!nickname || !birth_date) {
-                alert('필수 입력 항목을 확인해주세요.');
-                return;
-            }
-
-            if (isNewMode && !login_id) {
-                alert('아이디를 입력해주세요.');
+            if (!nickname) {
+                alert('이름을 입력해주세요.');
+                btn.disabled = false;
+                btn.textContent = '저장하기';
                 return;
             }
 
@@ -305,9 +345,13 @@
                     location.href = '/landlord_management.html';
                 } else {
                     alert('오류: ' + data.error);
+                    btn.disabled = false;
+                    btn.textContent = '저장하기';
                 }
             } catch (err) {
                 alert('오류가 발생했습니다.');
+                btn.disabled = false;
+                btn.textContent = '저장하기';
             }
         }
 
@@ -318,10 +362,6 @@
             if (status === '승인') select.classList.add('status-approved');
             if (status === '종료') select.classList.add('status-terminated');
         }
-
-        document.getElementById('phone_number').addEventListener('input', (e) => {
-            e.target.value = formatPhone(e.target.value);
-        });
     </script>
 </body>
 
