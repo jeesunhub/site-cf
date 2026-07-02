@@ -403,18 +403,46 @@
 
         async function loadActiveContracts() {
             try {
-                const res = await fetch(`/api/landlord/${user.id}/contracts/active`);
-                if (res.ok) {
-                    const raw = await res.json();
-                    const unique = [];
-                    const seenIds = new Set();
-                    raw.forEach(c => {
-                        if (!seenIds.has(c.id)) {
-                            seenIds.add(c.id);
-                            unique.push(c);
-                        }
-                    });
-                    activeContracts = unique;
+                let url;
+                if (user.role === 'admin') {
+                    // Admin: fetch all active contracts via admin calendar-data
+                    url = `/api/admin/calendar-data`;
+                    const res = await fetch(url);
+                    if (res.ok) {
+                        const rows = await res.json();
+                        // Deduplicate by contract_id
+                        const seen = new Set();
+                        activeContracts = rows.filter(r => {
+                            if (seen.has(r.contract_id)) return false;
+                            seen.add(r.contract_id);
+                            return true;
+                        }).map(r => ({
+                            id: r.contract_id,
+                            tenant_id: r.tenant_id,
+                            nickname: r.tenant_nickname,
+                            building: r.building_name,
+                            room_number: r.room_number,
+                            keywords: [], // calendar-data doesn't include keywords
+                            contract_start_date: r.contract_start_date,
+                            contract_end_date: r.contract_end_date
+                        }));
+                    }
+                } else {
+                    // Landlord: fetch active contracts with keywords
+                    url = `/api/landlord/${user.id}/contracts/active`;
+                    const res = await fetch(url);
+                    if (res.ok) {
+                        const raw = await res.json();
+                        const unique = [];
+                        const seenIds = new Set();
+                        raw.forEach(c => {
+                            if (!seenIds.has(c.id)) {
+                                seenIds.add(c.id);
+                                unique.push(c);
+                            }
+                        });
+                        activeContracts = unique;
+                    }
                 }
             } catch (e) {
                 console.error('Failed to load active contracts', e);
