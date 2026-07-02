@@ -149,8 +149,9 @@
             line-height: 1.2;
         }
         .tenant-room-small {
-            font-size: 0.65rem;
-            color: rgba(255,255,255,0.6);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.8);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -821,20 +822,29 @@
             const now = new Date();
             const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-            // Generate 13 months: this month first, then going back 11 months, then next month at the end
-            // Range: from next month going back 1 year, but this month at first position
+            // Generate 13 months: next month first, then this month, then going back 11 months
+            // Order: next month (leftmost) → this month → 11 months back (rightmost)
             const months = [];
             const baseDate = new Date();
             baseDate.setMonth(baseDate.getMonth() - timelineOffsetMonths);
 
-            // Position 0: This month (highlighted)
+            // Position 0: Next month (leftmost)
+            const nextMonth = new Date(baseDate);
+            nextMonth.setMonth(nextMonth.getMonth() + 1);
+            months.push({
+                val: `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}`,
+                label: `${nextMonth.getMonth() + 1}월`,
+                isCurrent: `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}` === currentMonthStr
+            });
+
+            // Position 1: This month
             months.push({
                 val: `${baseDate.getFullYear()}-${String(baseDate.getMonth() + 1).padStart(2, '0')}`,
                 label: `${baseDate.getMonth() + 1}월`,
                 isCurrent: `${baseDate.getFullYear()}-${String(baseDate.getMonth() + 1).padStart(2, '0')}` === currentMonthStr
             });
 
-            // Position 1-11: Going back 1 month to 11 months
+            // Position 2-12: Going back 1 month to 11 months
             const d = new Date(baseDate);
             for (let i = 0; i < 11; i++) {
                 d.setMonth(d.getMonth() - 1);
@@ -844,15 +854,6 @@
                     isCurrent: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === currentMonthStr
                 });
             }
-
-            // Position 12: Next month
-            const nextMonth = new Date(baseDate);
-            nextMonth.setMonth(nextMonth.getMonth() + 1);
-            months.push({
-                val: `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}`,
-                label: `${nextMonth.getMonth() + 1}월`,
-                isCurrent: `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}` === currentMonthStr
-            });
 
             // Setup Header
             headRow.innerHTML = '<th class="col-sticky">건물 이름</th>';
