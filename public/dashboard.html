@@ -799,20 +799,19 @@
             const now = new Date();
             const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-            // Generate 12 months in ascending order (oldest first on left, newest on right)
-            // Start from the oldest month (11 months before current - offset)
+            // Generate 12 months in descending order (newest first on left, oldest on right)
+            // Left side = newest, right side = oldest
             const months = [];
             const d = new Date();
             d.setMonth(d.getMonth() - timelineOffsetMonths); // newest month
-            d.setMonth(d.getMonth() - 11); // go back 11 months to get the oldest
             
             for (let i = 0; i < 12; i++) {
                 months.push({
                     val: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-                    label: `${d.getFullYear()}.${d.getMonth() + 1}월`,
+                    label: `${d.getMonth() + 1}월`,
                     isCurrent: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === currentMonthStr
                 });
-                d.setMonth(d.getMonth() + 1); // go forward (newer)
+                d.setMonth(d.getMonth() - 1); // go backwards (older)
             }
 
             // Label will be updated by updateYearLabel() based on scroll position
@@ -823,6 +822,7 @@
             months.forEach(m => {
                 const th = document.createElement('th');
                 th.textContent = m.label;
+                th.dataset.year = m.val.substring(0, 4);
                 if (m.isCurrent) th.className = 'current-month';
                 headRow.appendChild(th);
             });
@@ -920,11 +920,11 @@
                 }
             }
 
-            // Auto-scroll to the right (newest month) after render
+            // Auto-scroll to the left (newest month) after render
             requestAnimationFrame(() => {
                 const scrollArea = document.querySelector('.timeline-scroll-area');
                 if (scrollArea) {
-                    scrollArea.scrollLeft = scrollArea.scrollWidth;
+                    scrollArea.scrollLeft = 0;
                     updateYearLabel();
                 }
             });
@@ -960,11 +960,10 @@
             }
 
             if (visibleTh) {
-                // Extract year from the label (format: "2026.7월")
-                const text = visibleTh.textContent;
-                const yearMatch = text.match(/(\d{4})\./);
-                if (yearMatch) {
-                    label.textContent = `${yearMatch[1]}년`;
+                // Use data-year attribute
+                const year = visibleTh.dataset.year;
+                if (year) {
+                    label.textContent = `${year}년`;
                 }
             }
         }
