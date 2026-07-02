@@ -100,9 +100,13 @@
             text-align: left;
             padding: 6px 12px;
             font-size: 0.85rem;
+        }
+        .room-group-row td.col-sticky {
             position: sticky;
             left: 0;
             z-index: 5;
+            background: rgba(99, 102, 241, 0.15) !important;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.2);
         }
         .tenant-row td {
             cursor: pointer;
@@ -907,13 +911,16 @@
 
             // Render Rows - grouped by building
             for (const [bKey, contracts] of Object.entries(buildings)) {
-                // Building Group Header
+                // Building Group Header - split into sticky cell + rest
                 const trGroup = document.createElement('tr');
                 trGroup.className = 'room-group-row';
-                const tdGroup = document.createElement('td');
-                tdGroup.colSpan = 14;
-                tdGroup.innerHTML = `🏠 ${bKey}`;
-                trGroup.appendChild(tdGroup);
+                const tdStickyGroup = document.createElement('td');
+                tdStickyGroup.className = 'col-sticky';
+                tdStickyGroup.innerHTML = `🏠 ${bKey}`;
+                trGroup.appendChild(tdStickyGroup);
+                const tdRest = document.createElement('td');
+                tdRest.colSpan = 13;
+                trGroup.appendChild(tdRest);
                 tBody.appendChild(trGroup);
 
                 // Contracts (tenant rows)
